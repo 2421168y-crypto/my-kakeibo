@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>スマート家計簿</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-slate-100 min-h-screen pb-20 md:pb-8 text-slate-800">
+  <div id="app" class="max-w-md md:max-w-5xl lg:max-w-6xl mx-auto px-0 md:px-6">
+
+    <!-- ヘッダー -->
+    <header class="bg-indigo-600 text-white p-4 sticky top-0 z-10 shadow-md md:rounded-b-xl flex justify-between items-center">
+      <h1 class="font-bold text-lg flex items-center gap-2">
+        <i class="fa-solid fa-wallet"></i> マイ家計簿
+      </h1>
+
+      <!-- PC用ナビゲーション -->
+      <nav class="hidden md:flex gap-1 bg-indigo-700/50 p-1 rounded-lg">
+        <button @click="currentTab = 'calendar'" class="px-4 py-1.5 rounded-md text-sm font-bold transition"
+                :class="currentTab === 'calendar' ? 'bg-white text-indigo-600 shadow' : 'text-indigo-100 hover:bg-indigo-600'">
+          <i class="fa-solid fa-receipt mr-1.5"></i>家計簿
+        </button>
+        <button @click="currentTab = 'plan'" class="px-4 py-1.5 rounded-md text-sm font-bold transition"
+                :class="currentTab === 'plan' ? 'bg-white text-indigo-600 shadow' : 'text-indigo-100 hover:bg-indigo-600'">
+          <i class="fa-solid fa-chart-pie mr-1.5"></i>使用計画
+        </button>
+        <button @click="currentTab = 'savings'" class="px-4 py-1.5 rounded-md text-sm font-bold transition"
+                :class="currentTab === 'savings' ? 'bg-white text-indigo-600 shadow' : 'text-indigo-100 hover:bg-indigo-600'">
+          <i class="fa-solid fa-piggy-bank mr-1.5"></i>貯金
+        </button>
+      </nav>
+
+      <button @click="fetchTransactions" class="text-xs bg-indigo-500 hover:bg-indigo-700 px-3 py-1.5 rounded-full border border-indigo-400 flex items-center gap-1.5">
+        <i class="fa-solid fa-rotate-right" :class="{'fa-spin': fetching}"></i>
+        <span class="hidden md:inline">データ</span>更新
+      </button>
+    </header>
+
+    <main class="p-4 md:py-6">
+
+      <!-- ================= 画面1: 登録 & カレンダー (家計簿メイン) ================= -->
+      <section v-if="currentTab === 'calendar'" class="space-y-4">
+
+        <!-- 月選択バー -->
+        <div class="bg-white p-3 rounded-xl shadow-sm flex justify-between items-center border border-slate-100">
+          <button @click="changeMonth(-1)" class="w-9 h-9 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 font-bold">
+            <i class="fa-solid fa-chevron-left"></i>
+          </button>
+
+          <div class="flex items-center gap-2">
+            <i class="fa-regular fa-calendar text-indigo-600"></i>
+            <span class="font-bold text-base md:text-lg text-slate-800">{{ currentYearMonthLabel }}</span>
+            <button v-if="selectedDateFilter" @click="selectedDateFilter = null" class="text-xs bg-rose-50 text-rose-600 border border-rose-200 px-2 py-0.5 rounded-full ml-2">
+              日付解除 ({{ formatDateShort(selectedDateFilter) }}) ✕
+            </button>
+          </div>
+
+          <button @click="changeMonth(1)" class="w-9 h-9 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 font-bold">
+            <i class="fa-solid fa-chevron-right"></i>
+          </button>
+        </div>
+
+        <!-- 2カラムレイアウト (PC) -->
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+
+          <!-- 左側: サマリー・カレンダー・入力フォーム -->
+          <div class="md:col-span-6 space-y-4">
+            
+            <!-- 当月サマリーカード -->
+            <div class="grid grid-cols-3 gap-2 bg-white p-4 rounded-xl shadow-sm text-center border border-slate-100">
+              <div>
+                <div class="text-xs text-slate-500">月収入</div>
+                <div class="font-bold text-emerald-600 text-sm md:text-base mt-1">+¥{{ monthlyIncome.toLocaleString() }}</div>
+              </div>
+              <div class="border-x border-slate-100">
+                <div class="text-xs text-slate-500">月支出</div>
+                <div class="font-bold text-rose-500 text-sm md:text-base mt-1">-¥{{ monthlyExpense.toLocaleString() }}</div>
+              </div>
+              <div>
+                <div class="text-xs text-slate-500">収支差額</div>
+                <div class="font-bold text-sm md:text-base mt-1" :class="monthlyBalance >= 0 ? 'text-indigo-600' : 'text-rose-600'">
+                  ¥{{ monthlyBalance.toLocaleString() }}
+                </div>
+              </div>
+            </div>
+
+            <!-- 月間カレンダー -->
+            <div class="bg-white rounded-xl shadow-sm p-4 border border-slate-100">
+              <div class="text-xs font-bold text-slate-500 mb-2 flex justify-between items-center">
+                <span><i class="fa-solid fa-calendar-days text-indigo-600 mr-1"></i> 日別支出・収入カレンダー</span>
+                <span class="text-[10px] text-slate-400">日付選択で絞り込み</span>
+              </div>
+              
+              <!-- 曜日ヘッダー -->
+              <div class="grid grid-cols-7 text-center text-[11px] font-bold py-1 border-b border-slate-100">
+                <span class="text-rose-500">日</span>
+                <span>月</span>
+                <span>火</span>
+                <span>水</span>
+                <span>木</span>
+                <span>金</span>
+                <span class="text-blue-500">土</span>
+              </div>
+
+              <!-- カレンダー日付マス目 -->
+              <div class="grid grid-cols-7 gap-1 pt-1">
+                <div v-for="(cell, idx) in calendarDays" :key="idx"
+                     @click="cell.day && selectDate(cell.dateStr)"
+                     class="min-h-[52px] p-1 rounded-lg border text-left transition flex flex-col justify-between"
+                     :class="[
+                       !cell.day ? 'border-transparent bg-transparent cursor-default' : 'cursor-pointer hover:border-indigo-400',
+                       cell.dateStr === selectedDateFilter ? 'bg-indigo-50 border-indigo-500 ring-2 ring-indigo-200' : 'border-slate-100 bg-slate-50/50'
+                     ]">
+                  <template v-if="cell.day">
+                    <span class="text-[11px] font-bold"
+                          :class="cell.isToday ? 'bg-indigo-600 text-white w-4 h-4 rounded-full flex items-center justify-center' : 'text-slate-600'">
+                      {{ cell.day }}
+                    </span>
+                    <div class="text-[9px] leading-tight space-y-0.5">
+                      <div v-if="cell.income > 0" class="text-emerald-600 font-bold truncate">+{{ formatK(cell.income) }}</div>
+                      <div v-if="cell.expense > 0" class="text-rose-500 font-bold truncate">-{{ formatK(cell.expense) }}</div>
+                    </div>
+                  </template>
+                </div>
+              </div>
+            </div>
+
+            <!-- 登録 / 編集フォーム -->
+            <div class="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-100" id="form-section">
+              <div class="p-3.5 font-bold text-slate-700 flex justify-between items-center bg-slate-50 border-b border-slate-100">
+                <span class="text-sm">
+                  <i class="fa-solid mr-2" :class="isEditing ? 'fa-pen-to-square text-amber-500' : 'fa-plus-circle text-indigo-600'"></i>
+                  {{ isEditing ? 'データを編集する' : '収支を記録する' }}
+                </span>
+                <button v-if="isEditing" @click="cancelEdit" class="text-xs bg-slate-200 hover:bg-slate-300 text-slate-600 px-2 py-1 rounded">
+                  キャンセル
+                </button>
+              </div>
+              
+              <form @submit.prevent="saveTransaction" class="p-4 space-y-3">
+                <div class="flex gap-2">
+                  <label class="flex-1 py-1.5 text-center rounded-lg border font-bold text-xs cursor-pointer transition"
+                         :class="form.type === 'expense' ? 'bg-rose-50 border-rose-500 text-rose-600' : 'border-slate-200 text-slate-500 hover:bg-slate-50'">
+                    <input type="radio" value="expense" v-model="form.type" class="hidden"> 支出
+                  </label>
+                  <label class="flex-1 py-1.5 text-center rounded-lg border font-bold text-xs cursor-pointer transition"
+                         :class="form.type === 'income' ? 'bg-emerald-50 border-emerald-500 text-emerald-600' : 'border-slate-200 text-slate-500 hover:bg-slate-50'">
+                    <input type="radio" value="income" v-model="form.type" class="hidden"> 収入
+                  </label>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                  <div>
+                    <label class="block text-[11px] font-medium text-slate-600 mb-1">日付</label>
+                    <input type="date" v-model="form.date" required class="w-full border rounded-lg p-2 text-xs bg-slate-50">
+                  </div>
+                  <div>
+                    <label class="block text-[11px] font-medium text-slate-600 mb-1">金額 (円)</label>
+                    <input type="number" v-model.number="form.amount" placeholder="1000" required class="w-full border rounded-lg p-2 text-xs bg-slate-50">
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                  <div>
+                    <label class="block text-[11px] font-medium text-slate-600 mb-1">カテゴリ</label>
+                    <select v-model="form.category" class="w-full border rounded-lg p-2 text-xs bg-slate-50">
+                      <option>食費</option>
+                      <option>日用品</option>
+                      <option>交通費</option>
+                      <option>固定費</option>
+                      <option>娯楽・交際費</option>
+                      <option>給与</option>
+                      <option>その他</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-[11px] font-medium text-slate-600 mb-1">メモ</label>
+                    <input type="text" v-model="form.memo" placeholder="スーパー〇〇" class="w-full border rounded-lg p-2 text-xs bg-slate-50">
+                  </div>
+                </div>
+
+                <button type="submit" :disabled="loading"
+                        class="w-full py-2 rounded-lg font-bold text-sm text-white transition shadow-sm disabled:opacity-50"
+                        :class="isEditing ? 'bg-amber-500 hover:bg-amber-600' : 'bg-indigo-600 hover:bg-indigo-700'">
+                  {{ loading ? '処理中...' : (isEditing ? '変更を保存する' : '追加する') }}
+                </button>
+              </form>
+            </div>
+
+          </div>
+
+          <!-- 右側: 利用履歴一覧（編集・削除機能付き） -->
+          <div class="md:col-span-6 bg-white rounded-xl shadow-sm p-4 border border-slate-100">
+            <div class="flex justify-between items-center pb-3 border-b border-slate-100 mb-3">
+              <h2 class="font-bold text-slate-700 text-sm md:text-base">
+                <i class="fa-regular fa-list-alt text-indigo-600 mr-1.5"></i>
+                <span v-if="selectedDateFilter">{{ formatDateShort(selectedDateFilter) }} の履歴</span>
+                <span v-else>{{ currentYearMonthLabel }} の履歴</span>
+              </h2>
+              <span class="text-xs text-slate-400">全 {{ filteredTransactions.length }} 件</span>
+            </div>
+
+            <div v-if="fetching" class="text-center py-12 text-slate-400 text-sm">データ読み込み中...</div>
+            <div v-else-if="filteredTransactions.length === 0" class="text-center py-12 text-slate-400 text-sm">
+              {{ selectedDateFilter ? 'この日のデータはありません' : '今月のデータはありません' }}
+            </div>
+            
+            <ul v-else class="divide-y divide-slate-100 max-h-[520px] overflow-y-auto pr-1">
+              <li v-for="item in filteredTransactions" :key="item.id" class="py-2.5 flex justify-between items-center hover:bg-slate-50 px-2 rounded-lg transition group">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
+                       :class="item.type === 'expense' ? 'bg-rose-100 text-rose-600' : 'bg-emerald-100 text-emerald-600'">
+                    {{ item.category ? item.category.slice(0, 1) : '他' }}
+                  </div>
+                  <div>
+                    <div class="font-bold text-sm text-slate-800">{{ item.memo || item.category }}</div>
+                    <div class="text-[11px] text-slate-400">{{ formatDateShort(item.date) }} · {{ item.category }}</div>
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-3">
+                  <div class="font-bold text-sm md:text-base text-right" :class="item.type === 'expense' ? 'text-rose-500' : 'text-emerald-600'">
+                    {{ item.type === 'expense' ? '-' : '+' }}¥{{ Number(item.amount).toLocaleString() }}
+                  </div>
+
+                  <!-- 編集・削除ボタン -->
+                  <div class="flex gap-1">
+                    <button @click="editTransaction(item)" class="w-7 h-7 rounded text-slate-400 hover:text-amber-500 hover:bg-amber-50 flex items-center justify-center transition" title="編集">
+                      <i class="fa-solid fa-pen text-xs"></i>
+                    </button>
+                    <button @click="deleteTransaction(item.id)" class="w-7 h-7 rounded text-slate-400 hover:text-rose-500 hover:bg-rose-50 flex items-center justify-center transition" title="削除">
+                      <i class="fa-solid fa-trash text-xs"></i>
+                    </button>
+                  </div>
+                </div>
+              </li>
+            </ul>
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- ================= 画面2: 使用計画 ================= -->
+      <section v-if="currentTab === 'plan'" class="bg-white rounded-xl shadow-sm p-6 border border-slate-100 space-y-4">
+        <div>
+          <h2 class="font-bold text-slate-800 text-base md:text-lg mb-1">今月の予算計画</h2>
+          <p class="text-xs text-slate-400">カテゴリごとの設定予算と現在の支出額比較</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+          <div v-for="plan in budgetPlans" :key="plan.category" class="p-4 border border-slate-100 rounded-xl bg-slate-50 space-y-2">
+            <div class="flex justify-between text-xs font-bold">
+              <span class="text-slate-700">{{ plan.category }}</span>
+              <span>
+                ¥{{ getCategorySpent(plan.category).toLocaleString() }} / 
+                <span class="text-slate-400">¥{{ plan.target.toLocaleString() }}</span>
+              </span>
+            </div>
+            <div class="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
+              <div class="h-2.5 rounded-full transition-all duration-300"
+                   :class="getCategorySpent(plan.category) > plan.target ? 'bg-rose-500' : 'bg-indigo-600'"
+                   :style="{ width: Math.min((getCategorySpent(plan.category) / plan.target) * 100, 100) + '%' }">
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 画面3: 貯金管理 ================= -->
+      <section v-if="currentTab === 'savings'" class="bg-white rounded-xl shadow-sm p-6 border border-slate-100 space-y-4">
+        <div>
+          <h2 class="font-bold text-slate-800 text-base md:text-lg mb-1">貯金目標・資産管理</h2>
+          <p class="text-xs text-slate-400">目標金額に向けた進捗状況</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
+          <div v-for="item in savingsGoals" :key="item.title" class="border border-slate-100 p-4 rounded-xl bg-slate-50 space-y-3">
+            <div class="flex justify-between items-center">
+              <span class="font-bold text-sm text-slate-700"><i class="fa-solid fa-piggy-bank text-amber-500 mr-2"></i>{{ item.title }}</span>
+              <span class="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">{{ Math.round((item.current / item.target) * 100) }}% 達成</span>
+            </div>
+            <div class="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+              <div class="bg-amber-500 h-2 rounded-full" :style="{ width: (item.current / item.target) * 100 + '%' }"></div>
+            </div>
+            <div class="flex justify-between text-xs text-slate-500 pt-1">
+              <span>現在: ¥{{ item.current.toLocaleString() }}</span>
+              <span>目標: ¥{{ item.target.toLocaleString() }}</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- 下部固定タブナビゲーションバー (スマホのみ表示) -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around p-2 z-20 shadow-lg md:hidden">
+      <button @click="currentTab = 'calendar'" class="flex-1 flex flex-col items-center py-1 text-xs"
+              :class="currentTab === 'calendar' ? 'text-indigo-600 font-bold' : 'text-slate-400'">
+        <i class="fa-solid fa-receipt text-base mb-1"></i>
+        家計簿
+      </button>
+      <button @click="currentTab = 'plan'" class="flex-1 flex flex-col items-center py-1 text-xs"
+              :class="currentTab === 'plan' ? 'text-indigo-600 font-bold' : 'text-slate-400'">
+        <i class="fa-solid fa-chart-pie text-base mb-1"></i>
+        使用計画
+      </button>
+      <button @click="currentTab = 'savings'" class="flex-1 flex flex-col items-center py-1 text-xs"
+              :class="currentTab === 'savings' ? 'text-indigo-600 font-bold' : 'text-slate-400'">
+        <i class="fa-solid fa-piggy-bank text-base mb-1"></i>
+        貯金
+      </button>
+    </nav>
+
+  </div>
+
+  <script>
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbxu0IZnDw3Y3E5FXRn02b2xFFa7x9BTRCij1_JpsCAbRYBivhk5pV7wIqRxJKCqQxw9/exec'; // ★ご自身のGAS WebアプリURLを設定してください
+
+    Vue.createApp({
+      data() {
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+
+        return {
+          currentTab: 'calendar',
+          transactions: [],
+          loading: false,
+          fetching: false,
+          selectedYearMonth: `${yyyy}-${mm}`, // "YYYY-MM"
+          selectedDateFilter: null, // "YYYY-MM-DD"
+          isEditing: false,
+          editingId: null,
+          form: {
+            date: `${yyyy}-${mm}-${dd}`,
+            type: 'expense',
+            amount: '',
+            category: '食費',
+            memo: ''
+          },
+          budgetPlans: [
+            { category: '食費', target: 40000 },
+            { category: '日用品', target: 10000 },
+            { category: '交通費', target: 15000 },
+            { category: '娯楽・交際費', target: 20000 }
+          ],
+          savingsGoals: [
+            { title: '旅行資金', current: 60000, target: 150000 },
+            { title: '緊急予備資金', current: 200000, target: 500000 }
+          ]
+        }
+      },
+      computed: {
+        currentYearMonthLabel() {
+          const [y, m] = this.selectedYearMonth.split('-');
+          return `${y}年${Number(m)}月`;
+        },
+        monthlyTransactions() {
+          return this.transactions.filter(t => t.date && String(t.date).startsWith(this.selectedYearMonth));
+        },
+        filteredTransactions() {
+          let list = this.monthlyTransactions;
+          if (this.selectedDateFilter) {
+            list = list.filter(t => t.date === this.selectedDateFilter);
+          }
+          return list;
+        },
+        monthlyIncome() {
+          return this.monthlyTransactions
+            .filter(t => t.type === 'income')
+            .reduce((sum, t) => sum + Number(t.amount), 0);
+        },
+        monthlyExpense() {
+          return this.monthlyTransactions
+            .filter(t => t.type === 'expense')
+            .reduce((sum, t) => sum + Number(t.amount), 0);
+        },
+        monthlyBalance() {
+          return this.monthlyIncome - this.monthlyExpense;
+        },
+        calendarDays() {
+          if (!this.selectedYearMonth) return [];
+          const [year, month] = this.selectedYearMonth.split('-').map(Number);
+          const firstDay = new Date(year, month - 1, 1);
+          const lastDay = new Date(year, month, 0);
+          
+          const startDayOfWeek = firstDay.getDay();
+          const daysInMonth = lastDay.getDate();
+
+          const days = [];
+          for (let i = 0; i < startDayOfWeek; i++) {
+            days.push({ day: null, dateStr: null });
+          }
+
+          const todayObj = new Date();
+          const todayStr = `${todayObj.getFullYear()}-${String(todayObj.getMonth() + 1).padStart(2, '0')}-${String(todayObj.getDate()).padStart(2, '0')}`;
+
+          for (let d = 1; d <= daysInMonth; d++) {
+            const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+            const dayList = this.transactions.filter(t => t.date === dateStr);
+            const expense = dayList.filter(t => t.type === 'expense').reduce((sum, t) => sum + Number(t.amount), 0);
+            const income = dayList.filter(t => t.type === 'income').reduce((sum, t) => sum + Number(t.amount), 0);
+
+            days.push({
+              day: d,
+              dateStr,
+              expense,
+              income,
+              isToday: dateStr === todayStr
+            });
+          }
+          return days;
+        }
+      },
+      mounted() {
+        this.fetchTransactions();
+      },
+      methods: {
+        async fetchTransactions() {
+          if (!GAS_URL || GAS_URL === 'YOUR_GAS_WEB_APP_URL') return;
+          this.fetching = true;
+          try {
+            const res = await fetch(GAS_URL);
+            const data = await res.json();
+            
+            // 取得したデータの日付を安全に YYYY-MM-DD 形式に整形
+            this.transactions = data.map(item => {
+              let dateStr = String(item.date || '');
+              if (dateStr.includes('T')) dateStr = dateStr.split('T')[0];
+              return {
+                ...item,
+                date: dateStr
+              };
+            }).sort((a, b) => new Date(b.date) - new Date(a.date));
+
+          } catch (e) {
+            console.error(e);
+          } finally {
+            this.fetching = false;
+          }
+        },
+        async saveTransaction() {
+          this.loading = true;
+          try {
+            const payload = {
+              action: this.isEditing ? 'update' : 'add',
+              id: this.editingId,
+              ...this.form
+            };
+            // CORS制限回避のため text/plain で送信
+            await fetch(GAS_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'text/plain' },
+              body: JSON.stringify(payload)
+            });
+            await this.fetchTransactions();
+            this.resetForm();
+          } catch (e) {
+            console.error(e);
+            alert('保存に失敗しました');
+          } finally {
+            this.loading = false;
+          }
+        },
+        editTransaction(item) {
+          this.isEditing = true;
+          this.editingId = item.id;
+          this.form = {
+            date: item.date,
+            type: item.type,
+            amount: Number(item.amount),
+            category: item.category,
+            memo: item.memo || ''
+          };
+          document.getElementById('form-section')?.scrollIntoView({ behavior: 'smooth' });
+        },
+        cancelEdit() {
+          this.isEditing = false;
+          this.editingId = null;
+          this.resetForm();
+        },
+        async deleteTransaction(id) {
+          if (!confirm('この明細を削除してもよろしいですか？')) return;
+          this.fetching = true;
+          try {
+            await fetch(GAS_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'text/plain' },
+              body: JSON.stringify({ action: 'delete', id })
+            });
+            await this.fetchTransactions();
+          } catch (e) {
+            console.error(e);
+            alert('削除に失敗しました');
+          } finally {
+            this.fetching = false;
+          }
+        },
+        resetForm() {
+          this.isEditing = false;
+          this.editingId = null;
+          this.form.amount = '';
+          this.form.memo = '';
+        },
+        changeMonth(offset) {
+          const [year, month] = this.selectedYearMonth.split('-').map(Number);
+          const d = new Date(year, month - 1 + offset, 1);
+          const yStr = d.getFullYear();
+          const mStr = String(d.getMonth() + 1).padStart(2, '0');
+          this.selectedYearMonth = `${yStr}-${mStr}`;
+          this.selectedDateFilter = null;
+        },
+        selectDate(dateStr) {
+          if (this.selectedDateFilter === dateStr) {
+            this.selectedDateFilter = null;
+          } else {
+            this.selectedDateFilter = dateStr;
+            this.form.date = dateStr;
+          }
+        },
+        getCategorySpent(category) {
+          return this.monthlyTransactions
+            .filter(t => t.type === 'expense' && t.category === category)
+            .reduce((sum, t) => sum + Number(t.amount), 0);
+        },
+        formatDateShort(dateStr) {
+          if (!dateStr) return '';
+          const parts = dateStr.split('-');
+          if (parts.length >= 3) {
+            return `${Number(parts[1])}/${Number(parts[2])}`;
+          }
+          return dateStr;
+        },
+        formatK(num) {
+          if (num >= 10000) return (num / 10000).toFixed(1) + '万';
+          if (num >= 1000) return (num / 1000).toFixed(0) + 'k';
+          return num;
+        }
+      }
+    }).mount('#app')
+  </script>
+</body>
+</html>
