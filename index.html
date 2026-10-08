@@ -167,18 +167,14 @@
                   <div>
                     <label class="block text-[11px] font-medium text-slate-600 mb-1">カテゴリ</label>
                     <select v-model="form.category" class="w-full border rounded-lg p-2 text-xs bg-slate-50">
-                      <option>食費</option>
-                      <option>日用品</option>
-                      <option>交通費</option>
-                      <option>固定費</option>
-                      <option>娯楽・交際費</option>
-                      <option>給与</option>
-                      <option>その他</option>
+                      <option v-for="plan in budgetPlans" :key="plan.category" :value="plan.category">
+                        {{ plan.category }}
+                      </option>
                     </select>
                   </div>
                   <div>
                     <label class="block text-[11px] font-medium text-slate-600 mb-1">メモ</label>
-                    <input type="text" v-model="form.memo" placeholder="スーパー〇〇" class="w-full border rounded-lg p-2 text-xs bg-slate-50">
+                    <input type="text" v-model="form.memo" placeholder="買い物メモなど" class="w-full border rounded-lg p-2 text-xs bg-slate-50">
                   </div>
                 </div>
 
@@ -244,28 +240,104 @@
 
       </section>
 
-      <!-- ================= 画面2: 使用計画 ================= -->
-      <section v-if="currentTab === 'plan'" class="bg-white rounded-xl shadow-sm p-6 border border-slate-100 space-y-4">
-        <div>
-          <h2 class="font-bold text-slate-800 text-base md:text-lg mb-1">今月の予算計画</h2>
-          <p class="text-xs text-slate-400">カテゴリごとの設定予算と現在の支出額比較</p>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-          <div v-for="plan in budgetPlans" :key="plan.category" class="p-4 border border-slate-100 rounded-xl bg-slate-50 space-y-2">
-            <div class="flex justify-between text-xs font-bold">
-              <span class="text-slate-700">{{ plan.category }}</span>
-              <span>
-                ¥{{ getCategorySpent(plan.category).toLocaleString() }} / 
-                <span class="text-slate-400">¥{{ plan.target.toLocaleString() }}</span>
-              </span>
+      <!-- ================= 画面2: 使用計画 & カテゴリ管理 ================= -->
+      <section v-if="currentTab === 'plan'" class="space-y-4">
+        
+        <!-- ヘッダー & 新規カテゴリ追加エリア -->
+        <div class="bg-white rounded-xl shadow-sm p-4 md:p-6 border border-slate-100 space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h2 class="font-bold text-slate-800 text-base md:text-lg mb-1">今月の使用計画 & カテゴリ設定</h2>
+              <p class="text-xs text-slate-400">カテゴリごとの予算設定、カテゴリの追加・削除・名前変更ができます</p>
             </div>
-            <div class="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
-              <div class="h-2.5 rounded-full transition-all duration-300"
-                   :class="getCategorySpent(plan.category) > plan.target ? 'bg-rose-500' : 'bg-indigo-600'"
-                   :style="{ width: Math.min((getCategorySpent(plan.category) / plan.target) * 100, 100) + '%' }">
+            
+            <button @click="showAddCategoryForm = !showAddCategoryForm" 
+                    class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-3 py-2 rounded-lg flex items-center justify-center gap-1.5 transition shrink-0">
+              <i class="fa-solid" :class="showAddCategoryForm ? 'fa-minus' : 'fa-plus'"></i>
+              {{ showAddCategoryForm ? 'フォームを閉じる' : 'カテゴリを追加' }}
+            </button>
+          </div>
+
+          <!-- 新規カテゴリ追加フォーム -->
+          <div v-if="showAddCategoryForm" class="bg-indigo-50/60 p-4 rounded-xl border border-indigo-100 space-y-3">
+            <div class="font-bold text-xs text-indigo-900">新しいカテゴリの追加</div>
+            <div class="grid grid-cols-1 sm:grid-cols-12 gap-2">
+              <div class="sm:col-span-6">
+                <label class="block text-[10px] font-bold text-slate-500 mb-1">カテゴリ名</label>
+                <input type="text" v-model="newCat.name" placeholder="例: 美容費" class="w-full border rounded-lg p-2 text-xs bg-white">
+              </div>
+              <div class="sm:col-span-4">
+                <label class="block text-[10px] font-bold text-slate-500 mb-1">月間目標予算 (円)</label>
+                <input type="number" v-model.number="newCat.target" placeholder="10000" class="w-full border rounded-lg p-2 text-xs bg-white">
+              </div>
+              <div class="sm:col-span-2 flex items-end">
+                <button @click="addCategory" class="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-lg transition">
+                  追加
+                </button>
               </div>
             </div>
+          </div>
+        </div>
+
+        <!-- カテゴリ別予算一覧カード -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div v-for="(plan, index) in budgetPlans" :key="index" class="bg-white p-4 border border-slate-100 rounded-xl shadow-sm space-y-3">
+            
+            <!-- カードヘッダー（名前表示・名前編集・削除） -->
+            <div class="flex justify-between items-center">
+              <!-- 名前編集モード -->
+              <div v-if="editingCategoryIndex === index" class="flex items-center gap-2 flex-1 mr-2">
+                <input type="text" v-model="editingCategoryName" class="border rounded px-2 py-1 text-xs font-bold w-full bg-slate-50">
+                <button @click="saveCategoryName(index)" class="bg-emerald-600 text-white text-[10px] font-bold px-2 py-1 rounded hover:bg-emerald-700 shrink-0">保存</button>
+                <button @click="editingCategoryIndex = null" class="bg-slate-200 text-slate-600 text-[10px] font-bold px-2 py-1 rounded hover:bg-slate-300 shrink-0">取消</button>
+              </div>
+
+              <!-- 通常表示 -->
+              <div v-else class="flex items-center gap-2">
+                <span class="font-bold text-sm text-slate-800">{{ plan.category }}</span>
+                <button @click="startEditCategory(index, plan.category)" class="text-slate-400 hover:text-amber-500 text-xs px-1" title="名前を変更">
+                  <i class="fa-solid fa-pen"></i>
+                </button>
+              </div>
+
+              <!-- 削除ボタン -->
+              <button @click="deleteCategory(index)" class="text-slate-300 hover:text-rose-500 text-xs p-1" title="カテゴリを削除">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </div>
+
+            <!-- 当月支出 & 予算金額の入力編集 -->
+            <div class="flex justify-between items-center text-xs">
+              <span class="text-slate-500">
+                当月使用: <strong class="text-slate-700">¥{{ getCategorySpent(plan.category).toLocaleString() }}</strong>
+              </span>
+              
+              <div class="flex items-center gap-1.5">
+                <span class="text-slate-400">予算: ¥</span>
+                <input type="number" 
+                       v-model.number="plan.target" 
+                       @change="saveBudgetPlans" 
+                       class="w-24 border rounded px-1.5 py-1 text-right font-bold text-xs bg-slate-50 focus:bg-white focus:border-indigo-500" 
+                       step="1000" min="0">
+              </div>
+            </div>
+
+            <!-- 予算進捗バー -->
+            <div class="space-y-1">
+              <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden border border-slate-100">
+                <div class="h-2.5 rounded-full transition-all duration-300"
+                     :class="plan.target > 0 && getCategorySpent(plan.category) > plan.target ? 'bg-rose-500' : 'bg-indigo-600'"
+                     :style="{ width: plan.target > 0 ? Math.min((getCategorySpent(plan.category) / plan.target) * 100, 100) + '%' : '0%' }">
+                </div>
+              </div>
+              <div class="flex justify-between text-[10px] text-slate-400">
+                <span>進捗率: {{ plan.target > 0 ? Math.round((getCategorySpent(plan.category) / plan.target) * 100) : 0 }}%</span>
+                <span v-if="plan.target > 0" :class="plan.target - getCategorySpent(plan.category) < 0 ? 'text-rose-500 font-bold' : 'text-slate-500'">
+                  {{ plan.target - getCategorySpent(plan.category) >= 0 ? '残り ¥' + (plan.target - getCategorySpent(plan.category)).toLocaleString() : '超過 ¥' + Math.abs(plan.target - getCategorySpent(plan.category)).toLocaleString() }}
+                </span>
+              </div>
+            </div>
+
           </div>
         </div>
       </section>
@@ -318,7 +390,9 @@
   </div>
 
   <script>
-    const GAS_URL = 'https://script.google.com/macros/s/AKfycbxu0IZnDw3Y3E5FXRn02b2xFFa7x9BTRCij1_JpsCAbRYBivhk5pV7wIqRxJKCqQxw9/exec'; // ★ご自身のGAS WebアプリURLを設定してください
+    // ★ご自身のGAS WebアプリURLを設定してください (/exec で終わるURL)
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbxu0IZnDw3Y3E5FXRn02b2xFFa7x9BTRCij1_JpsCAbRYBivhk5pV7wIqRxJKCqQxw9/exec
+'; 
 
     Vue.createApp({
       data() {
@@ -332,10 +406,18 @@
           transactions: [],
           loading: false,
           fetching: false,
-          selectedYearMonth: `${yyyy}-${mm}`, // "YYYY-MM"
-          selectedDateFilter: null, // "YYYY-MM-DD"
+          selectedYearMonth: `${yyyy}-${mm}`,
+          selectedDateFilter: null,
           isEditing: false,
           editingId: null,
+          showAddCategoryForm: false,
+          editingCategoryIndex: null,
+          editingCategoryName: '',
+          newCat: {
+            name: '',
+            target: 10000
+          },
+          budgetPlans: this.loadBudgetPlans(),
           form: {
             date: `${yyyy}-${mm}-${dd}`,
             type: 'expense',
@@ -343,12 +425,6 @@
             category: '食費',
             memo: ''
           },
-          budgetPlans: [
-            { category: '食費', target: 40000 },
-            { category: '日用品', target: 10000 },
-            { category: '交通費', target: 15000 },
-            { category: '娯楽・交際費', target: 20000 }
-          ],
           savingsGoals: [
             { title: '旅行資金', current: 60000, target: 150000 },
             { title: '緊急予備資金', current: 200000, target: 500000 }
@@ -361,7 +437,7 @@
           return `${y}年${Number(m)}月`;
         },
         monthlyTransactions() {
-          return this.transactions.filter(t => t.date && String(t.date).startsWith(this.selectedYearMonth));
+          return this.transactions.filter(t => t.date && t.date.startsWith(this.selectedYearMonth));
         },
         filteredTransactions() {
           let list = this.monthlyTransactions;
@@ -421,6 +497,99 @@
         this.fetchTransactions();
       },
       methods: {
+        loadBudgetPlans() {
+          const defaultPlans = [
+            { category: '食費', target: 40000 },
+            { category: '交通費', target: 15000 },
+            { category: '書籍費', target: 5000 },
+            { category: '友達費', target: 10000 },
+            { category: '必要費', target: 20000 },
+            { category: '趣味費', target: 15000 },
+            { category: '日用品費', target: 10000 },
+            { category: '給与', target: 0 },
+            { category: 'その他', target: 0 }
+          ];
+          const saved = localStorage.getItem('my_kakeibo_budget_plans');
+          if (saved) {
+            try {
+              const parsed = JSON.parse(saved);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                return parsed;
+              }
+            } catch (e) {
+              console.error(e);
+            }
+          }
+          return defaultPlans;
+        },
+        saveBudgetPlans() {
+          localStorage.setItem('my_kakeibo_budget_plans', JSON.stringify(this.budgetPlans));
+        },
+        addCategory() {
+          if (!this.newCat.name.trim()) {
+            alert('カテゴリ名を入力してください');
+            return;
+          }
+          if (this.budgetPlans.some(p => p.category === this.newCat.name.trim())) {
+            alert('同名のカテゴリがすでに存在します');
+            return;
+          }
+          this.budgetPlans.push({
+            category: this.newCat.name.trim(),
+            target: Number(this.newCat.target) || 0
+          });
+          this.saveBudgetPlans();
+          this.newCat.name = '';
+          this.newCat.target = 10000;
+          this.showAddCategoryForm = false;
+        },
+        deleteCategory(index) {
+          const catName = this.budgetPlans[index].category;
+          if (confirm(`カテゴリ「${catName}」を削除してもよろしいですか？`)) {
+            this.budgetPlans.splice(index, 1);
+            this.saveBudgetPlans();
+          }
+        },
+        startEditCategory(index, currentName) {
+          this.editingCategoryIndex = index;
+          this.editingCategoryName = currentName;
+        },
+        saveCategoryName(index) {
+          const newName = this.editingCategoryName.trim();
+          if (!newName) {
+            alert('カテゴリ名を入力してください');
+            return;
+          }
+          const oldName = this.budgetPlans[index].category;
+          if (newName !== oldName && this.budgetPlans.some(p => p.category === newName)) {
+            alert('同名のカテゴリがすでに存在します');
+            return;
+          }
+          this.budgetPlans[index].category = newName;
+          this.saveBudgetPlans();
+          this.editingCategoryIndex = null;
+          this.editingCategoryName = '';
+        },
+        cleanDate(rawDate) {
+          if (!rawDate) return '';
+          let str = String(rawDate).trim();
+          if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+          if (str.includes('T')) str = str.split('T')[0];
+          str = str.replace(/\//g, '-');
+
+          let d = new Date(str);
+          if (isNaN(d.getTime())) {
+            const currentYear = new Date().getFullYear();
+            d = new Date(`${str} ${currentYear}`);
+          }
+          if (!isNaN(d.getTime())) {
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+          }
+          return str;
+        },
         async fetchTransactions() {
           if (!GAS_URL || GAS_URL === 'YOUR_GAS_WEB_APP_URL') return;
           this.fetching = true;
@@ -428,13 +597,11 @@
             const res = await fetch(GAS_URL);
             const data = await res.json();
             
-            // 取得したデータの日付を安全に YYYY-MM-DD 形式に整形
             this.transactions = data.map(item => {
-              let dateStr = String(item.date || '');
-              if (dateStr.includes('T')) dateStr = dateStr.split('T')[0];
+              const rawDate = item.date || item.data;
               return {
                 ...item,
-                date: dateStr
+                date: this.cleanDate(rawDate)
               };
             }).sort((a, b) => new Date(b.date) - new Date(a.date));
 
@@ -452,7 +619,6 @@
               id: this.editingId,
               ...this.form
             };
-            // CORS制限回避のため text/plain で送信
             await fetch(GAS_URL, {
               method: 'POST',
               headers: { 'Content-Type': 'text/plain' },
