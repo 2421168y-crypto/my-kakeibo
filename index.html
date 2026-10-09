@@ -168,7 +168,7 @@
                     <label class="block text-[11px] font-medium text-slate-500 mb-1">カテゴリ</label>
                     <select v-model="form.category" class="w-full border border-slate-200 rounded-xl p-2 text-xs bg-slate-50/50 focus:bg-white focus:border-amber-300">
                       <option v-for="plan in budgetPlans" :key="plan.category" :value="plan.category">
-                        {{ plan.category }}
+                        {{ getCategoryIcon(plan.category) }} {{ plan.category }}
                       </option>
                     </select>
                   </div>
@@ -207,9 +207,9 @@
             <ul v-else class="divide-y divide-emerald-50 max-h-[520px] overflow-y-auto pr-1">
               <li v-for="item in filteredTransactions" :key="item.id" class="py-2.5 flex justify-between items-center hover:bg-amber-50/30 px-2 rounded-xl transition group">
                 <div class="flex items-center gap-2.5">
-                  <div class="w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold shrink-0 shadow-sm transition"
+                  <div class="w-9 h-9 rounded-2xl flex items-center justify-center text-base shrink-0 shadow-sm transition"
                        :class="getCategoryColorClass(item.category, item.type)">
-                    <i :class="getCategoryIcon(item.category)"></i>
+                    <span>{{ getCategoryIcon(item.category) }}</span>
                   </div>
                   <div>
                     <div class="font-bold text-sm text-slate-800">{{ item.memo || item.category }}</div>
@@ -296,9 +296,9 @@
 
               <!-- 通常表示 -->
               <div v-else class="flex items-center gap-2">
-                <div class="w-7 h-7 rounded-lg flex items-center justify-center text-xs shrink-0"
+                <div class="w-8 h-8 rounded-xl flex items-center justify-center text-base shrink-0 shadow-sm"
                      :class="getCategoryColorClass(plan.category, 'expense')">
-                  <i :class="getCategoryIcon(plan.category)"></i>
+                  <span>{{ getCategoryIcon(plan.category) }}</span>
                 </div>
                 <span class="font-bold text-sm text-slate-800">{{ plan.category }}</span>
                 <button @click="startEditCategory(index, plan.category)" class="text-slate-400 hover:text-amber-500 text-xs px-1" title="名前を変更">
@@ -598,35 +598,37 @@
         this.fetchTransactions();
       },
       methods: {
-        // --- カテゴリ用アイコン & パステルカラー判定 ---
+        // --- カテゴリ用絵文字アイコン判定 ---
         getCategoryIcon(categoryName) {
-          const icons = {
-            '食費': 'fa-solid fa-utensils',
-            '交通費': 'fa-solid fa-train-subway',
-            '書籍費': 'fa-solid fa-book-open',
-            '友達費': 'fa-solid fa-heart',
-            '必要費': 'fa-solid fa-house-chimney',
-            '趣味費': 'fa-solid fa-palette',
-            '日用品費': 'fa-solid fa-basket-shopping',
-            '給与': 'fa-solid fa-sack-dollar',
-            'その他': 'fa-solid fa-star'
-          };
-          return icons[categoryName] || 'fa-solid fa-tag';
+          if (!categoryName) return '✨';
+          const name = String(categoryName).trim();
+
+          if (name.includes('食')) return '🍴';
+          if (name.includes('交通') || name.includes('電車') || name.includes('バス') || name.includes('車')) return '🚃';
+          if (name.includes('書') || name.includes('本')) return '📖';
+          if (name.includes('友') || name.includes('交際') || name.includes('人')) return '🩷';
+          if (name.includes('必要') || name.includes('住') || name.includes('家') || name.includes('光熱') || name.includes('固定')) return '🏠';
+          if (name.includes('趣味') || name.includes('遊') || name.includes('推し')) return '🎨';
+          if (name.includes('日用') || name.includes('雑貨') || name.includes('生活')) return '🧺';
+          if (name.includes('給') || name.includes('収入') || name.includes('手当')) return '💰';
+
+          return '✨';
         },
         getCategoryColorClass(categoryName, type) {
-          if (type === 'income') return 'bg-emerald-100/80 text-emerald-600 border border-emerald-200/50';
-          const colors = {
-            '食費': 'bg-amber-100/80 text-amber-600 border border-amber-200/50',
-            '交通費': 'bg-sky-100/80 text-sky-500 border border-sky-200/50',
-            '書籍費': 'bg-purple-100/80 text-purple-500 border border-purple-200/50',
-            '友達費': 'bg-pink-100/80 text-pink-500 border border-pink-200/50',
-            '必要費': 'bg-teal-100/80 text-teal-600 border border-teal-200/50',
-            '趣味費': 'bg-indigo-100/80 text-indigo-500 border border-indigo-200/50',
-            '日用品費': 'bg-emerald-100/80 text-emerald-600 border border-emerald-200/50',
-            '給与': 'bg-yellow-100/80 text-yellow-600 border border-yellow-200/50',
-            'その他': 'bg-slate-100 text-slate-500 border border-slate-200/50'
-          };
-          return colors[categoryName] || 'bg-amber-100/80 text-amber-600 border border-amber-200/50';
+          if (type === 'income') return 'bg-emerald-100/80 border border-emerald-200/60';
+          if (!categoryName) return 'bg-amber-100/80 border border-amber-200/60';
+          const name = String(categoryName).trim();
+
+          if (name.includes('食')) return 'bg-amber-100/90 border border-amber-200/80';
+          if (name.includes('交通')) return 'bg-sky-100/90 border border-sky-200/80';
+          if (name.includes('書')) return 'bg-purple-100/90 border border-purple-200/80';
+          if (name.includes('友')) return 'bg-pink-100/90 border border-pink-200/80';
+          if (name.includes('必要')) return 'bg-teal-100/90 border border-teal-200/80';
+          if (name.includes('趣味')) return 'bg-indigo-100/90 border border-indigo-200/80';
+          if (name.includes('日用')) return 'bg-emerald-100/90 border border-emerald-200/80';
+          if (name.includes('給')) return 'bg-yellow-100/90 border border-yellow-200/80';
+
+          return 'bg-amber-100/90 border border-amber-200/80';
         },
 
         // --- 予算計画・カテゴリ関連 ---
