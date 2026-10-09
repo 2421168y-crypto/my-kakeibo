@@ -144,11 +144,11 @@
                 <div class="flex gap-2">
                   <label class="flex-1 py-1.5 text-center rounded-xl border font-bold text-xs cursor-pointer transition"
                          :class="form.type === 'expense' ? 'bg-rose-50 border-rose-200 text-rose-500' : 'border-slate-200 text-slate-400 hover:bg-slate-50'">
-                    <input type="radio" value="expense" v-model="form.type" class="hidden"> 支出
+                    <input type="radio" value="expense" v-model="form.type" @change="onTypeChange" class="hidden"> 支出
                   </label>
                   <label class="flex-1 py-1.5 text-center rounded-xl border font-bold text-xs cursor-pointer transition"
                          :class="form.type === 'income' ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'border-slate-200 text-slate-400 hover:bg-slate-50'">
-                    <input type="radio" value="income" v-model="form.type" class="hidden"> 収入
+                    <input type="radio" value="income" v-model="form.type" @change="onTypeChange" class="hidden"> 収入
                   </label>
                 </div>
 
@@ -167,9 +167,18 @@
                   <div>
                     <label class="block text-[11px] font-medium text-slate-500 mb-1">カテゴリ</label>
                     <select v-model="form.category" class="w-full border border-slate-200 rounded-xl p-2 text-xs bg-slate-50/50 focus:bg-white focus:border-amber-300">
-                      <option v-for="plan in budgetPlans" :key="plan.category" :value="plan.category">
-                        {{ getCategoryIcon(plan.category) }} {{ plan.category }}
-                      </option>
+                      <!-- 支出カテゴリー選択肢 -->
+                      <template v-if="form.type === 'expense'">
+                        <option v-for="plan in budgetPlans" :key="plan.category" :value="plan.category">
+                          {{ getCategoryIcon(plan.category) }} {{ plan.category }}
+                        </option>
+                      </template>
+                      <!-- 収入カテゴリー選択肢 -->
+                      <template v-else>
+                        <option v-for="cat in incomeCategories" :key="cat" :value="cat">
+                          {{ getCategoryIcon(cat) }} {{ cat }}
+                        </option>
+                      </template>
                     </select>
                   </div>
                   <div>
@@ -248,9 +257,9 @@
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h2 class="font-bold text-slate-800 text-base md:text-lg mb-1 flex items-center gap-2">
-                <i class="fa-solid fa-chart-pie text-emerald-500"></i> 今月の使用計画 & カテゴリ設定
+                <i class="fa-solid fa-chart-pie text-emerald-500"></i> 今月の使用計画 & 支出カテゴリ設定
               </h2>
-              <p class="text-xs text-slate-400">カテゴリごとの予算設定、カテゴリの追加・削除・名前変更ができます</p>
+              <p class="text-xs text-slate-400">支出カテゴリごとの予算設定、カテゴリの追加・削除・名前変更ができます</p>
             </div>
             
             <button @click="showAddCategoryForm = !showAddCategoryForm" 
@@ -262,7 +271,7 @@
 
           <!-- 新規カテゴリ追加フォーム -->
           <div v-if="showAddCategoryForm" class="bg-gradient-to-r from-amber-50/60 to-emerald-50/60 p-4 rounded-2xl border border-amber-100 space-y-3">
-            <div class="font-bold text-xs text-slate-700">新しいカテゴリの追加</div>
+            <div class="font-bold text-xs text-slate-700">新しい支出カテゴリの追加</div>
             <div class="grid grid-cols-1 sm:grid-cols-12 gap-2">
               <div class="sm:col-span-6">
                 <label class="block text-[10px] font-bold text-slate-400 mb-1">カテゴリ名</label>
@@ -502,7 +511,11 @@
           isEditing: false,
           editingId: null,
           
-          // 使用計画・カテゴリ用
+          // カテゴリーデータ
+          budgetPlans: this.loadBudgetPlans(),
+          incomeCategories: ['給料', '臨時収入', 'おこづかい', 'その他'],
+          
+          // 使用計画用
           showAddCategoryForm: false,
           editingCategoryIndex: null,
           editingCategoryName: '',
@@ -510,7 +523,6 @@
             name: '',
             target: 10000
           },
-          budgetPlans: this.loadBudgetPlans(),
           
           // 貯金目標用
           showAddSavingsForm: false,
@@ -598,11 +610,26 @@
         this.fetchTransactions();
       },
       methods: {
+        // --- 収支タイプ切り替え時の処理 ---
+        onTypeChange() {
+          if (this.form.type === 'expense') {
+            this.form.category = this.budgetPlans[0]?.category || '食費';
+          } else {
+            this.form.category = this.incomeCategories[0] || '給料';
+          }
+        },
+
         // --- カテゴリ用絵文字アイコン判定 ---
         getCategoryIcon(categoryName) {
           if (!categoryName) return '✨';
           const name = String(categoryName).trim();
 
+          // 収入系
+          if (name.includes('給料') || name.includes('給与')) return '💰';
+          if (name.includes('臨時')) return '🎁';
+          if (name.includes('こづかい') || name.includes('小遣い')) return '👛';
+
+          // 支出系
           if (name.includes('食')) return '🍴';
           if (name.includes('交通') || name.includes('電車') || name.includes('バス') || name.includes('車')) return '🚃';
           if (name.includes('書') || name.includes('本')) return '📖';
@@ -610,13 +637,18 @@
           if (name.includes('必要') || name.includes('住') || name.includes('家') || name.includes('光熱') || name.includes('固定')) return '🏠';
           if (name.includes('趣味') || name.includes('遊') || name.includes('推し')) return '🎨';
           if (name.includes('日用') || name.includes('雑貨') || name.includes('生活')) return '🧺';
-          if (name.includes('給') || name.includes('収入') || name.includes('手当')) return '💰';
 
           return '✨';
         },
         getCategoryColorClass(categoryName, type) {
-          if (type === 'income') return 'bg-emerald-100/80 border border-emerald-200/60';
-          if (!categoryName) return 'bg-amber-100/80 border border-amber-200/60';
+          if (type === 'income') {
+            const name = String(categoryName || '').trim();
+            if (name.includes('給料') || name.includes('給与')) return 'bg-amber-100/90 border border-amber-200/80';
+            if (name.includes('臨時')) return 'bg-emerald-100/90 border border-emerald-200/80';
+            if (name.includes('こづかい')) return 'bg-pink-100/90 border border-pink-200/80';
+            return 'bg-teal-100/90 border border-teal-200/80';
+          }
+          if (!categoryName) return 'bg-amber-100/90 border border-amber-200/80';
           const name = String(categoryName).trim();
 
           if (name.includes('食')) return 'bg-amber-100/90 border border-amber-200/80';
@@ -626,7 +658,6 @@
           if (name.includes('必要')) return 'bg-teal-100/90 border border-teal-200/80';
           if (name.includes('趣味')) return 'bg-indigo-100/90 border border-indigo-200/80';
           if (name.includes('日用')) return 'bg-emerald-100/90 border border-emerald-200/80';
-          if (name.includes('給')) return 'bg-yellow-100/90 border border-yellow-200/80';
 
           return 'bg-amber-100/90 border border-amber-200/80';
         },
@@ -641,7 +672,6 @@
             { category: '必要費', target: 20000 },
             { category: '趣味費', target: 15000 },
             { category: '日用品費', target: 10000 },
-            { category: '給与', target: 0 },
             { category: 'その他', target: 0 }
           ];
           const saved = localStorage.getItem('my_kakeibo_budget_plans');
@@ -649,7 +679,8 @@
             try {
               const parsed = JSON.parse(saved);
               if (Array.isArray(parsed) && parsed.length > 0) {
-                return parsed;
+                // 古いデータに給与が含まれていたら除外して支出専用にする
+                return parsed.filter(p => p.category !== '給与' && p.category !== '給料');
               }
             } catch (e) {
               console.error(e);
