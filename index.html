@@ -33,7 +33,7 @@
         </button>
         <button @click="currentTab = 'books'" class="px-3.5 py-1.5 rounded-md text-sm font-bold transition"
                 :class="currentTab === 'books' ? 'bg-amber-200/70 text-slate-800 shadow-sm' : 'text-slate-600 hover:bg-emerald-50'">
-          <i class="fa-solid fa-book-open mr-1 text-emerald-500"></i>買いたい本
+          <i class="fa-solid fa-book-bookmark mr-1 text-emerald-500"></i>読書ノート
         </button>
       </nav>
 
@@ -462,7 +462,7 @@
         </div>
       </section>
 
-      <!-- ================= 画面4: 買いたい本・読書リスト (新機能) ================= -->
+      <!-- ================= 画面4: 読書ノート & 本リスト (大幅パワーアップ) ================= -->
       <section v-if="currentTab === 'books'" class="space-y-4">
 
         <!-- ヘッダー & 新規本追加エリア -->
@@ -470,147 +470,255 @@
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h2 class="font-bold text-slate-800 text-base md:text-lg mb-1 flex items-center gap-2">
-                <span class="text-xl">📚</span> 買いたい本 & 読書メモ
+                <span class="text-xl">📚</span> YUI 読書ノート
               </h2>
-              <p class="text-xs text-slate-400">買いたい本と金額をリスト化。購入したら「買った！」を押して記録に残せます♪</p>
+              <p class="text-xs text-slate-400">読みたい本・積ん読・読んだ本の記録や評価、読書レビューを残せます</p>
             </div>
             
             <button @click="showAddBookForm = !showAddBookForm" 
                     class="text-xs bg-emerald-100 hover:bg-emerald-200/70 text-slate-700 font-bold px-3 py-2 rounded-xl flex items-center justify-center gap-1.5 transition shrink-0 shadow-sm border border-emerald-200/50">
               <i class="fa-solid" :class="showAddBookForm ? 'fa-minus' : 'fa-plus'"></i>
-              {{ showAddBookForm ? 'フォームを閉じる' : '買いたい本を追加' }}
+              {{ showAddBookForm ? 'フォームを閉じる' : '新しい本を登録' }}
             </button>
           </div>
 
-          <!-- 新規本追加フォーム -->
+          <!-- 新規本登録フォーム -->
           <div v-if="showAddBookForm" class="bg-gradient-to-r from-amber-50/60 to-emerald-50/60 p-4 rounded-2xl border border-amber-100 space-y-3">
             <div class="font-bold text-xs text-slate-700 flex items-center gap-1">
-              <span>📖</span> 新しく買いたい本を登録
+              <span>📖</span> 新しい本の登録
             </div>
+
             <div class="grid grid-cols-1 sm:grid-cols-12 gap-2">
-              <div class="sm:col-span-5">
+              <div class="sm:col-span-6">
                 <label class="block text-[10px] font-bold text-slate-400 mb-1">本のタイトル</label>
-                <input type="text" v-model="newBook.title" placeholder="例: 理由のない光" class="w-full border border-slate-200 rounded-xl p-2 text-xs bg-white">
+                <div class="flex gap-1.5">
+                  <input type="text" v-model="newBook.title" placeholder="例: 理由のない光" class="w-full border border-slate-200 rounded-xl p-2 text-xs bg-white">
+                  <button type="button" @click="searchCover" :disabled="searchingCover"
+                          class="shrink-0 text-[11px] bg-amber-200 hover:bg-amber-300 text-slate-800 font-bold px-2.5 rounded-xl border border-amber-300/50 transition">
+                    <span v-if="searchingCover">検索中...</span>
+                    <span v-else>🔍 表紙自動取得</span>
+                  </button>
+                </div>
               </div>
+
+              <div class="sm:col-span-3">
+                <label class="block text-[10px] font-bold text-slate-400 mb-1">著者名</label>
+                <input type="text" v-model="newBook.author" placeholder="著者名" class="w-full border border-slate-200 rounded-xl p-2 text-xs bg-white">
+              </div>
+
               <div class="sm:col-span-3">
                 <label class="block text-[10px] font-bold text-slate-400 mb-1">金額 (円)</label>
                 <input type="number" v-model.number="newBook.price" placeholder="1800" class="w-full border border-slate-200 rounded-xl p-2 text-xs bg-white">
               </div>
+
               <div class="sm:col-span-4">
-                <label class="block text-[10px] font-bold text-slate-400 mb-1">著者 / メモ (任意)</label>
-                <input type="text" v-model="newBook.memo" placeholder="例: ○○先生のおすすめ本" class="w-full border border-slate-200 rounded-xl p-2 text-xs bg-white">
+                <label class="block text-[10px] font-bold text-slate-400 mb-1">現在の状態 (ステータス)</label>
+                <select v-model="newBook.status" class="w-full border border-slate-200 rounded-xl p-2 text-xs bg-white font-bold">
+                  <option value="want">📖 読みたい本</option>
+                  <option value="tsundoku">📚 積ん読 (購入済み・未読)</option>
+                  <option value="read">🎉 読んだ本 (読了)</option>
+                </select>
               </div>
+
+              <div class="sm:col-span-8">
+                <label class="block text-[10px] font-bold text-slate-400 mb-1">表紙画像URL (自動取得できない場合に入力)</label>
+                <input type="text" v-model="newBook.coverUrl" placeholder="https://..." class="w-full border border-slate-200 rounded-xl p-2 text-xs bg-white">
+              </div>
+
+              <!-- 評価 (読んだ本の場合) -->
+              <div v-if="newBook.status === 'read'" class="sm:col-span-12 space-y-1">
+                <label class="block text-[10px] font-bold text-slate-400">★ 評価</label>
+                <div class="flex gap-1 text-lg text-amber-400 cursor-pointer">
+                  <span v-for="star in 5" :key="star" @click="newBook.rating = star">
+                    <i :class="star <= newBook.rating ? 'fa-solid fa-star' : 'fa-regular fa-star text-slate-300'"></i>
+                  </span>
+                  <span class="text-xs text-slate-500 font-bold ml-2 self-center">{{ newBook.rating }} / 5点</span>
+                </div>
+              </div>
+
+              <div class="sm:col-span-12">
+                <label class="block text-[10px] font-bold text-slate-400 mb-1">読書メモ / 感想 / 引用など</label>
+                <textarea v-model="newBook.review" rows="2" placeholder="気になったフレーズや感想など..." class="w-full border border-slate-200 rounded-xl p-2 text-xs bg-white"></textarea>
+              </div>
+
               <div class="sm:col-span-12 flex justify-end pt-1">
                 <button @click="addBook" class="px-6 py-2 bg-amber-200 hover:bg-amber-300 text-slate-800 font-bold text-xs rounded-xl transition shadow-sm border border-amber-300/50 flex items-center gap-1.5">
-                  <i class="fa-solid fa-heart text-amber-400"></i> 本をリストに追加
+                  <i class="fa-solid fa-heart text-amber-400"></i> 本を登録する
                 </button>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- 読書サマリーカード -->
-        <div class="grid grid-cols-2 sm:grid-cols-2 gap-3">
-          <div class="bg-white/90 p-3.5 rounded-2xl shadow-sm border border-amber-100 flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-amber-100/80 flex items-center justify-center text-lg shrink-0">📖</div>
-            <div>
-              <div class="text-[11px] font-bold text-amber-800">買いたい本 (未購入)</div>
-              <div class="font-bold text-sm md:text-base text-slate-800">
-                {{ wishBooks.length }} 冊 <span class="text-xs text-slate-500">(¥{{ wishBooksTotal.toLocaleString() }})</span>
-              </div>
-            </div>
+        <!-- 読書サマリーカード (3項目) -->
+        <div class="grid grid-cols-3 gap-2 text-center">
+          <div class="bg-white/90 p-3 rounded-2xl shadow-sm border border-amber-100">
+            <div class="text-[10px] font-bold text-amber-700">📖 読みたい本</div>
+            <div class="font-bold text-sm md:text-base text-slate-800 mt-0.5">{{ wantBooks.length }} 冊</div>
           </div>
-
-          <div class="bg-white/90 p-3.5 rounded-2xl shadow-sm border border-emerald-100 flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-emerald-100/80 flex items-center justify-center text-lg shrink-0">🎉</div>
-            <div>
-              <div class="text-[11px] font-bold text-emerald-800">購入できた本</div>
-              <div class="font-bold text-sm md:text-base text-slate-800">
-                {{ purchasedBooks.length }} 冊 <span class="text-xs text-slate-500">(¥{{ purchasedBooksTotal.toLocaleString() }})</span>
-              </div>
-            </div>
+          <div class="bg-white/90 p-3 rounded-2xl shadow-sm border border-sky-100">
+            <div class="text-[10px] font-bold text-sky-700">📚 積ん読</div>
+            <div class="font-bold text-sm md:text-base text-slate-800 mt-0.5">{{ tsundokuBooks.length }} 冊</div>
+          </div>
+          <div class="bg-white/90 p-3 rounded-2xl shadow-sm border border-emerald-100">
+            <div class="text-[10px] font-bold text-emerald-700">🎉 読んだ本</div>
+            <div class="font-bold text-sm md:text-base text-slate-800 mt-0.5">{{ readBooks.length }} 冊</div>
           </div>
         </div>
 
-        <!-- フィルターボタン -->
-        <div class="flex gap-2 bg-white/70 p-1.5 rounded-2xl border border-emerald-100/60 backdrop-blur-sm w-fit text-xs font-bold">
-          <button @click="bookFilter = 'all'" class="px-3 py-1.5 rounded-xl transition"
+        <!-- フィルタータブ -->
+        <div class="flex gap-1.5 bg-white/70 p-1 rounded-2xl border border-emerald-100/60 backdrop-blur-sm w-full sm:w-fit text-xs font-bold overflow-x-auto">
+          <button @click="bookFilter = 'all'" class="px-3 py-1.5 rounded-xl transition whitespace-nowrap"
                   :class="bookFilter === 'all' ? 'bg-amber-200/80 text-slate-800 shadow-sm' : 'text-slate-500 hover:bg-amber-50'">
             すべて ({{ books.length }})
           </button>
-          <button @click="bookFilter = 'wish'" class="px-3 py-1.5 rounded-xl transition"
-                  :class="bookFilter === 'wish' ? 'bg-amber-200/80 text-slate-800 shadow-sm' : 'text-slate-500 hover:bg-amber-50'">
-            📖 買いたい本 ({{ wishBooks.length }})
+          <button @click="bookFilter = 'want'" class="px-3 py-1.5 rounded-xl transition whitespace-nowrap"
+                  :class="bookFilter === 'want' ? 'bg-amber-200/80 text-slate-800 shadow-sm' : 'text-slate-500 hover:bg-amber-50'">
+            📖 読みたい本 ({{ wantBooks.length }})
           </button>
-          <button @click="bookFilter = 'purchased'" class="px-3 py-1.5 rounded-xl transition"
-                  :class="bookFilter === 'purchased' ? 'bg-amber-200/80 text-slate-800 shadow-sm' : 'text-slate-500 hover:bg-amber-50'">
-            🎉 購入できた！ ({{ purchasedBooks.length }})
+          <button @click="bookFilter = 'tsundoku'" class="px-3 py-1.5 rounded-xl transition whitespace-nowrap"
+                  :class="bookFilter === 'tsundoku' ? 'bg-amber-200/80 text-slate-800 shadow-sm' : 'text-slate-500 hover:bg-amber-50'">
+            📚 積ん読 ({{ tsundokuBooks.length }})
+          </button>
+          <button @click="bookFilter = 'read'" class="px-3 py-1.5 rounded-xl transition whitespace-nowrap"
+                  :class="bookFilter === 'read' ? 'bg-amber-200/80 text-slate-800 shadow-sm' : 'text-slate-500 hover:bg-amber-50'">
+            🎉 読んだ本 ({{ readBooks.length }})
           </button>
         </div>
 
         <!-- 本の一覧表示 -->
         <div v-if="filteredBooks.length === 0" class="bg-white/80 rounded-2xl p-12 text-center text-slate-400 text-sm border border-emerald-100">
-          該当する本はありません。「買いたい本を追加」ボタンから登録してみましょう！
+          該当する本はありません。「新しい本を登録」から追加してみてください♪
         </div>
 
-        <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div v-for="(book, index) in filteredBooks" :key="book.id"
-               class="bg-white/90 p-4 rounded-2xl border shadow-sm transition space-y-2.5 relative overflow-hidden"
-               :class="book.purchased ? 'border-emerald-200/80 bg-emerald-50/20' : 'border-amber-100'">
+        <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div v-for="book in filteredBooks" :key="book.id"
+               class="bg-white/90 p-4 rounded-2xl border shadow-sm transition space-y-3 relative overflow-hidden flex flex-col justify-between"
+               :class="[
+                 book.status === 'read' ? 'border-emerald-200/80 bg-emerald-50/20' : 
+                 (book.status === 'tsundoku' ? 'border-sky-200/80 bg-sky-50/20' : 'border-amber-100')
+               ]">
             
-            <!-- カードヘッダー (ステータス・タイトル・価格) -->
-            <div class="flex justify-between items-start gap-2">
-              <div class="flex items-start gap-2.5">
-                <div class="w-9 h-9 rounded-xl flex items-center justify-center text-base shrink-0 shadow-sm mt-0.5"
-                     :class="book.purchased ? 'bg-emerald-100/90 text-emerald-600 border border-emerald-200' : 'bg-amber-100/90 text-amber-600 border border-amber-200'">
-                  <span>{{ book.purchased ? '🎉' : '📖' }}</span>
+            <div class="space-y-2.5">
+              <!-- 表紙画像 & タイトル・著者・金額エリア -->
+              <div class="flex gap-3 items-start">
+                
+                <!-- 表紙画像 (表示領域) -->
+                <div class="w-16 h-22 rounded-xl bg-slate-100 border border-slate-200/80 shrink-0 overflow-hidden flex items-center justify-center shadow-sm">
+                  <img v-if="book.coverUrl" :src="book.coverUrl" :alt="book.title" class="w-full h-full object-cover">
+                  <span v-else class="text-2xl">📖</span>
                 </div>
-                <div>
-                  <div class="font-bold text-sm text-slate-800 leading-snug">{{ book.title }}</div>
-                  <div v-if="book.memo" class="text-[11px] text-slate-400 mt-0.5">{{ book.memo }}</div>
+
+                <div class="flex-1 min-w-0 space-y-1">
+                  <!-- ステータアルバッジ -->
+                  <div class="flex justify-between items-center">
+                    <span class="inline-flex items-center gap-1 font-bold px-2.5 py-0.5 rounded-full text-[10px] border shadow-xs"
+                          :class="[
+                            book.status === 'read' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' :
+                            (book.status === 'tsundoku' ? 'bg-sky-100 text-sky-800 border-sky-200' : 'bg-amber-100 text-amber-800 border-amber-200')
+                          ]">
+                      {{ getStatusLabel(book.status) }}
+                    </span>
+
+                    <span v-if="book.price > 0" class="text-xs font-bold text-slate-500">
+                      ¥{{ Number(book.price).toLocaleString() }}
+                    </span>
+                  </div>
+
+                  <!-- 本タイトル & 著者 -->
+                  <h3 class="font-bold text-sm text-slate-800 leading-snug line-clamp-2">{{ book.title }}</h3>
+                  <div v-if="book.author" class="text-[11px] text-slate-400 font-medium">著者: {{ book.author }}</div>
+
+                  <!-- ★ 星評価表示 (読了本) -->
+                  <div v-if="book.status === 'read'" class="flex items-center gap-1 text-amber-400 text-xs pt-0.5">
+                    <i v-for="star in 5" :key="star" :class="star <= (book.rating || 0) ? 'fa-solid fa-star' : 'fa-regular fa-star text-slate-200'"></i>
+                    <span class="text-[10px] text-slate-400 font-bold ml-1">{{ book.rating || 0 }}.0</span>
+                  </div>
                 </div>
+
               </div>
 
-              <!-- 金額 -->
-              <div class="text-right shrink-0">
-                <div class="font-bold text-sm text-slate-800">¥{{ Number(book.price || 0).toLocaleString() }}</div>
+              <!-- 感想・読書メモ表示 -->
+              <div v-if="book.review" class="bg-white/80 p-2.5 rounded-xl border border-slate-100 text-xs text-slate-600 leading-relaxed whitespace-pre-wrap">
+                <div class="font-bold text-[10px] text-slate-400 mb-0.5 flex items-center gap-1">
+                  <i class="fa-solid fa-quote-left text-amber-300"></i> 読書メモ / 感想
+                </div>
+                {{ book.review }}
               </div>
             </div>
 
-            <!-- 購入済みバッジ & 操作ボタン -->
-            <div class="flex justify-between items-center pt-2 border-t border-slate-100 text-xs">
+            <!-- 下部アクションボタン -->
+            <div class="flex justify-between items-center pt-2 border-t border-slate-100 text-xs mt-2">
               
-              <!-- 左側: ステータス表示 -->
+              <!-- ステータス進めるボタン -->
               <div>
-                <span v-if="book.purchased" class="inline-flex items-center gap-1 bg-emerald-100/90 text-emerald-800 font-bold px-2.5 py-1 rounded-full text-[10px] border border-emerald-200">
-                  <span>✨</span> 購入できた！！ <span v-if="book.purchasedAt" class="text-[9px] opacity-80">({{ book.purchasedAt }})</span>
-                </span>
-                <span v-else class="inline-flex items-center gap-1 bg-amber-50 text-amber-700 font-bold px-2 py-0.5 rounded-full text-[10px] border border-amber-200/60">
-                  買いたい本
-                </span>
-              </div>
-
-              <!-- 右側: アクションボタン -->
-              <div class="flex items-center gap-1.5">
-                <!-- 買いたい本の場合: 購入完了ボタン -->
-                <button v-if="!book.purchased" @click="toggleBookStatus(book)"
-                        class="bg-emerald-100 hover:bg-emerald-200/80 text-emerald-800 font-bold px-3 py-1 rounded-xl text-xs transition border border-emerald-200/80 shadow-sm flex items-center gap-1">
-                  <span>✨</span> 買った！
-                </button>
-                <!-- 購入済みの場合: 未購入に戻すボタン -->
-                <button v-else @click="toggleBookStatus(book)"
-                        class="text-slate-400 hover:text-slate-600 text-[10px] px-2 py-1 rounded-lg hover:bg-slate-100 transition" title="未購入に戻す">
-                  未購入に戻す
+                <button v-if="book.status === 'want'" @click="updateStatus(book, 'tsundoku')"
+                        class="bg-sky-100 hover:bg-sky-200 text-sky-800 font-bold px-3 py-1 rounded-xl text-xs transition border border-sky-200 shadow-sm flex items-center gap-1">
+                  <span>📚</span> 積ん読にする (購入)
                 </button>
 
-                <!-- 削除ボタン -->
-                <button @click="deleteBook(book.id)" class="w-7 h-7 rounded-lg text-slate-300 hover:text-rose-400 hover:bg-rose-50 flex items-center justify-center transition" title="本を削除">
-                  <i class="fa-solid fa-trash text-xs"></i>
+                <button v-else-if="book.status === 'tsundoku'" @click="openReviewModal(book)"
+                        class="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold px-3 py-1 rounded-xl text-xs transition border border-emerald-200 shadow-sm flex items-center gap-1">
+                  <span>🎉</span> 読了！ (評価・感想)
+                </button>
+
+                <button v-else @click="openReviewModal(book)"
+                        class="text-amber-600 hover:text-amber-700 font-bold text-xs flex items-center gap-1">
+                  <i class="fa-solid fa-pen text-[10px]"></i> 感想・評価を編集
                 </button>
               </div>
+
+              <!-- 削除ボタン -->
+              <button @click="deleteBook(book.id)" class="w-7 h-7 rounded-lg text-slate-300 hover:text-rose-400 hover:bg-rose-50 flex items-center justify-center transition" title="本を削除">
+                <i class="fa-solid fa-trash text-xs"></i>
+              </button>
 
             </div>
 
+          </div>
+        </div>
+
+        <!-- 感想・評価 編集モーダル (ポップアップ) -->
+        <div v-if="editingBookModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-30">
+          <div class="bg-white rounded-3xl p-5 max-w-md w-full shadow-xl border border-emerald-100 space-y-4">
+            <div class="flex justify-between items-center pb-2 border-b">
+              <h3 class="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+                <span>🎉</span> 読書ノートの記入
+              </h3>
+              <button @click="editingBookModal = null" class="text-slate-400 hover:text-slate-600 text-sm font-bold">✕</button>
+            </div>
+
+            <div class="space-y-3">
+              <div>
+                <div class="font-bold text-xs text-slate-700 mb-1">{{ editingBookModal.title }}</div>
+                <label class="block text-[10px] font-bold text-slate-400 mb-1">ステータス</label>
+                <select v-model="editingBookModal.status" class="w-full border border-slate-200 rounded-xl p-2 text-xs bg-slate-50 font-bold">
+                  <option value="want">📖 読みたい本</option>
+                  <option value="tsundoku">📚 積ん読</option>
+                  <option value="read">🎉 読んだ本 (読了)</option>
+                </select>
+              </div>
+
+              <!-- 星評価 -->
+              <div>
+                <label class="block text-[10px] font-bold text-slate-400 mb-1">★ 評価 (5段階)</label>
+                <div class="flex gap-1 text-2xl text-amber-400 cursor-pointer">
+                  <span v-for="star in 5" :key="star" @click="editingBookModal.rating = star">
+                    <i :class="star <= editingBookModal.rating ? 'fa-solid fa-star' : 'fa-regular fa-star text-slate-200'"></i>
+                  </span>
+                </div>
+              </div>
+
+              <!-- 感想 -->
+              <div>
+                <label class="block text-[10px] font-bold text-slate-400 mb-1">読書メモ・感想</label>
+                <textarea v-model="editingBookModal.review" rows="4" placeholder="本の感想や心に残ったフレーズを自由に記録してください..." class="w-full border border-slate-200 rounded-xl p-2 text-xs bg-slate-50"></textarea>
+              </div>
+            </div>
+
+            <button @click="saveBookModal" class="w-full py-2.5 bg-amber-200 hover:bg-amber-300 text-slate-800 font-bold text-xs rounded-xl transition shadow-sm border border-amber-300/50">
+              ノートを保存する
+            </button>
           </div>
         </div>
 
@@ -637,8 +745,8 @@
       </button>
       <button @click="currentTab = 'books'" class="flex-1 flex flex-col items-center py-1 text-xs font-bold"
               :class="currentTab === 'books' ? 'text-emerald-600' : 'text-slate-400'">
-        <i class="fa-solid fa-book-open text-base mb-1" :class="currentTab === 'books' ? 'text-amber-400' : ''"></i>
-        買いたい本
+        <i class="fa-solid fa-book-bookmark text-base mb-1" :class="currentTab === 'books' ? 'text-amber-400' : ''"></i>
+        読書ノート
       </button>
     </nav>
 
@@ -689,13 +797,19 @@
           },
           savingsGoals: this.loadSavingsGoals(),
 
-          // 買いたい本・読書リスト用 (新機能)
+          // 読書ノート用 (機能拡充)
           showAddBookForm: false,
-          bookFilter: 'all', // 'all', 'wish', 'purchased'
+          searchingCover: false,
+          bookFilter: 'all', // 'all', 'want', 'tsundoku', 'read'
+          editingBookModal: null,
           newBook: {
             title: '',
+            author: '',
             price: '',
-            memo: ''
+            status: 'want',
+            coverUrl: '',
+            rating: 5,
+            review: ''
           },
           books: this.loadBooks(),
 
@@ -709,7 +823,6 @@
         }
       },
       computed: {
-        // 現在の収支タイプに応じたカテゴリーリストを動的に生成
         currentCategories() {
           if (this.form.type === 'income') {
             return this.incomeCategories.map(cat => ({
@@ -783,22 +896,20 @@
           return days;
         },
 
-        // 買いたい本関連の計算
-        wishBooks() {
-          return this.books.filter(b => !b.purchased);
+        // 読書ノート関連の計算
+        wantBooks() {
+          return this.books.filter(b => b.status === 'want');
         },
-        purchasedBooks() {
-          return this.books.filter(b => b.purchased);
+        tsundokuBooks() {
+          return this.books.filter(b => b.status === 'tsundoku');
         },
-        wishBooksTotal() {
-          return this.wishBooks.reduce((sum, b) => sum + Number(b.price || 0), 0);
-        },
-        purchasedBooksTotal() {
-          return this.purchasedBooks.reduce((sum, b) => sum + Number(b.price || 0), 0);
+        readBooks() {
+          return this.books.filter(b => b.status === 'read');
         },
         filteredBooks() {
-          if (this.bookFilter === 'wish') return this.wishBooks;
-          if (this.bookFilter === 'purchased') return this.purchasedBooks;
+          if (this.bookFilter === 'want') return this.wantBooks;
+          if (this.bookFilter === 'tsundoku') return this.tsundokuBooks;
+          if (this.bookFilter === 'read') return this.readBooks;
           return this.books;
         }
       },
@@ -820,17 +931,30 @@
         this.fetchTransactions();
       },
       methods: {
-        // --- 買いたい本関連メソッド ---
+        // --- 読書ノート関連メソッド ---
         loadBooks() {
           const defaultBooks = [
-            { id: 1, title: '成瀬は天下を取りに行く', price: 1705, memo: '話題の本', purchased: false, purchasedAt: null },
-            { id: 2, title: '汝、星のごとく', price: 1760, memo: '本屋大賞受賞作', purchased: true, purchasedAt: '2/15' }
+            { id: 1, title: '成瀬は天下を取りに行く', author: '宮島未奈', price: 1705, status: 'want', coverUrl: 'https://books.google.com/books/content?id=OQG3EAAAQBAJ&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api', rating: 0, review: '' },
+            { id: 2, title: '理由のない光', author: '津村記久子', price: 1800, status: 'tsundoku', coverUrl: '', rating: 0, review: '気になって購入。今週末から読み始める予定！' },
+            { id: 3, title: '汝、星のごとく', author: '町田そのこ', price: 1760, status: 'read', coverUrl: 'https://books.google.com/books/content?id=499_EAAAQBAJ&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api', rating: 5, review: 'ストーリー展開が素晴らしくて一気に読んでしまった。感動！' }
           ];
           const saved = localStorage.getItem('my_kakeibo_books');
           if (saved) {
             try {
               const parsed = JSON.parse(saved);
-              if (Array.isArray(parsed)) return parsed;
+              if (Array.isArray(parsed)) {
+                // 旧形式データの互換性対応 (purchased boolean -> status)
+                return parsed.map(b => {
+                  if (b.status) return b;
+                  return {
+                    ...b,
+                    author: b.author || '',
+                    status: b.purchased ? 'read' : 'want',
+                    rating: b.rating || (b.purchased ? 5 : 0),
+                    review: b.review || b.memo || ''
+                  };
+                });
+              }
             } catch (e) {
               console.error(e);
             }
@@ -840,6 +964,41 @@
         saveBooks() {
           localStorage.setItem('my_kakeibo_books', JSON.stringify(this.books));
         },
+        getStatusLabel(status) {
+          if (status === 'want') return '📖 読みたい本';
+          if (status === 'tsundoku') return '📚 積ん読';
+          if (status === 'read') return '🎉 読んだ本';
+          return '📖 本';
+        },
+        async searchCover() {
+          if (!this.newBook.title.trim()) {
+            alert('タイトルを入力してください');
+            return;
+          }
+          this.searchingCover = true;
+          try {
+            const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(this.newBook.title.trim())}`);
+            const data = await res.json();
+            if (data.items && data.items.length > 0) {
+              const info = data.items[0].volumeInfo;
+              if (info.imageLinks && info.imageLinks.thumbnail) {
+                this.newBook.coverUrl = info.imageLinks.thumbnail.replace('http:', 'https:');
+              } else {
+                alert('表紙画像が見つかりませんでした');
+              }
+              if (!this.newBook.author && info.authors) {
+                this.newBook.author = info.authors.join(', ');
+              }
+            } else {
+              alert('本が見つかりませんでした');
+            }
+          } catch(e) {
+            console.error(e);
+            alert('表紙の検索に失敗しました');
+          } finally {
+            this.searchingCover = false;
+          }
+        },
         addBook() {
           if (!this.newBook.title.trim()) {
             alert('本のタイトルを入力してください');
@@ -848,26 +1007,45 @@
           this.books.unshift({
             id: Date.now(),
             title: this.newBook.title.trim(),
+            author: this.newBook.author.trim(),
             price: Number(this.newBook.price) || 0,
-            memo: this.newBook.memo.trim(),
-            purchased: false,
-            purchasedAt: null
+            status: this.newBook.status,
+            coverUrl: this.newBook.coverUrl.trim(),
+            rating: this.newBook.status === 'read' ? Number(this.newBook.rating) : 0,
+            review: this.newBook.review.trim()
           });
           this.saveBooks();
-          this.newBook.title = '';
-          this.newBook.price = '';
-          this.newBook.memo = '';
+          
+          // フォームリセット
+          this.newBook = {
+            title: '',
+            author: '',
+            price: '',
+            status: 'want',
+            coverUrl: '',
+            rating: 5,
+            review: ''
+          };
           this.showAddBookForm = false;
         },
-        toggleBookStatus(book) {
-          book.purchased = !book.purchased;
-          if (book.purchased) {
-            const today = new Date();
-            book.purchasedAt = `${today.getMonth() + 1}/${today.getDate()}`;
-          } else {
-            book.purchasedAt = null;
+        updateStatus(book, newStatus) {
+          book.status = newStatus;
+          if (newStatus === 'read' && !book.rating) {
+            book.rating = 5;
           }
           this.saveBooks();
+        },
+        openReviewModal(book) {
+          this.editingBookModal = { ...book };
+        },
+        saveBookModal() {
+          if (!this.editingBookModal) return;
+          const idx = this.books.findIndex(b => b.id === this.editingBookModal.id);
+          if (idx !== -1) {
+            this.books[idx] = { ...this.editingBookModal };
+            this.saveBooks();
+          }
+          this.editingBookModal = null;
         },
         deleteBook(id) {
           if (confirm('この本をリストから削除してもよろしいですか？')) {
