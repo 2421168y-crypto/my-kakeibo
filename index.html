@@ -462,7 +462,7 @@
         </div>
       </section>
 
-      <!-- ================= 画面4: 読書ノート & 本リスト (大幅パワーアップ) ================= -->
+      <!-- ================= 画面4: 読書ノート & 本リスト (表紙表示修正版) ================= -->
       <section v-if="currentTab === 'books'" class="space-y-4">
 
         <!-- ヘッダー & 新規本追加エリア -->
@@ -492,9 +492,9 @@
               <div class="sm:col-span-6">
                 <label class="block text-[10px] font-bold text-slate-400 mb-1">本のタイトル</label>
                 <div class="flex gap-1.5">
-                  <input type="text" v-model="newBook.title" placeholder="例: 理由のない光" class="w-full border border-slate-200 rounded-xl p-2 text-xs bg-white">
+                  <input type="text" v-model="newBook.title" placeholder="例: 成瀬は天下を取りに行く" class="w-full border border-slate-200 rounded-xl p-2 text-xs bg-white">
                   <button type="button" @click="searchCover" :disabled="searchingCover"
-                          class="shrink-0 text-[11px] bg-amber-200 hover:bg-amber-300 text-slate-800 font-bold px-2.5 rounded-xl border border-amber-300/50 transition">
+                          class="shrink-0 text-[11px] bg-amber-200 hover:bg-amber-300 text-slate-800 font-bold px-3 rounded-xl border border-amber-300/50 transition">
                     <span v-if="searchingCover">検索中...</span>
                     <span v-else>🔍 表紙自動取得</span>
                   </button>
@@ -511,6 +511,15 @@
                 <input type="number" v-model.number="newBook.price" placeholder="1800" class="w-full border border-slate-200 rounded-xl p-2 text-xs bg-white">
               </div>
 
+              <!-- 表紙画像プレビューエリア -->
+              <div v-if="newBook.coverUrl" class="sm:col-span-12 flex items-center gap-3 bg-amber-100/50 p-2.5 rounded-xl border border-amber-200/80">
+                <img :src="newBook.coverUrl" referrerpolicy="no-referrer" class="w-12 h-16 object-cover rounded-lg border border-slate-200 shadow-sm">
+                <div class="text-xs">
+                  <div class="font-bold text-slate-800">✨ 表紙画像を取得しました！</div>
+                  <div class="text-[10px] text-slate-500">この画像で登録されます（URLで直接差し替えも可能）</div>
+                </div>
+              </div>
+
               <div class="sm:col-span-4">
                 <label class="block text-[10px] font-bold text-slate-400 mb-1">現在の状態 (ステータス)</label>
                 <select v-model="newBook.status" class="w-full border border-slate-200 rounded-xl p-2 text-xs bg-white font-bold">
@@ -521,7 +530,7 @@
               </div>
 
               <div class="sm:col-span-8">
-                <label class="block text-[10px] font-bold text-slate-400 mb-1">表紙画像URL (自動取得できない場合に入力)</label>
+                <label class="block text-[10px] font-bold text-slate-400 mb-1">表紙画像URL (手動設定・書き換え用)</label>
                 <input type="text" v-model="newBook.coverUrl" placeholder="https://..." class="w-full border border-slate-200 rounded-xl p-2 text-xs bg-white">
               </div>
 
@@ -603,9 +612,14 @@
               <!-- 表紙画像 & タイトル・著者・金額エリア -->
               <div class="flex gap-3 items-start">
                 
-                <!-- 表紙画像 (表示領域) -->
+                <!-- 表紙画像 (直リンクブロック対策 referrerpolicy 付与) -->
                 <div class="w-16 h-22 rounded-xl bg-slate-100 border border-slate-200/80 shrink-0 overflow-hidden flex items-center justify-center shadow-sm">
-                  <img v-if="book.coverUrl" :src="book.coverUrl" :alt="book.title" class="w-full h-full object-cover">
+                  <img v-if="book.coverUrl && !book.imageError" 
+                       :src="book.coverUrl" 
+                       :alt="book.title" 
+                       referrerpolicy="no-referrer"
+                       @error="book.imageError = true"
+                       class="w-full h-full object-cover">
                   <span v-else class="text-2xl">📖</span>
                 </div>
 
@@ -664,7 +678,7 @@
 
                 <button v-else @click="openReviewModal(book)"
                         class="text-amber-600 hover:text-amber-700 font-bold text-xs flex items-center gap-1">
-                  <i class="fa-solid fa-pen text-[10px]"></i> 感想・評価を編集
+                  <i class="fa-solid fa-pen text-[10px]"></i> 感想・表紙・評価を編集
                 </button>
               </div>
 
@@ -678,25 +692,46 @@
           </div>
         </div>
 
-        <!-- 感想・評価 編集モーダル (ポップアップ) -->
+        <!-- 感想・評価・表紙 編集モーダル (ポップアップ) -->
         <div v-if="editingBookModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-30">
-          <div class="bg-white rounded-3xl p-5 max-w-md w-full shadow-xl border border-emerald-100 space-y-4">
+          <div class="bg-white rounded-3xl p-5 max-w-md w-full shadow-xl border border-emerald-100 space-y-4 max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center pb-2 border-b">
               <h3 class="font-bold text-slate-800 text-sm flex items-center gap-1.5">
-                <span>🎉</span> 読書ノートの記入
+                <span>📖</span> 読書ノートの編集
               </h3>
               <button @click="editingBookModal = null" class="text-slate-400 hover:text-slate-600 text-sm font-bold">✕</button>
             </div>
 
             <div class="space-y-3">
               <div>
-                <div class="font-bold text-xs text-slate-700 mb-1">{{ editingBookModal.title }}</div>
+                <label class="block text-[10px] font-bold text-slate-400 mb-1">タイトル</label>
+                <input type="text" v-model="editingBookModal.title" class="w-full border border-slate-200 rounded-xl p-2 text-xs font-bold">
+              </div>
+
+              <div>
                 <label class="block text-[10px] font-bold text-slate-400 mb-1">ステータス</label>
                 <select v-model="editingBookModal.status" class="w-full border border-slate-200 rounded-xl p-2 text-xs bg-slate-50 font-bold">
                   <option value="want">📖 読みたい本</option>
                   <option value="tsundoku">📚 積ん読</option>
                   <option value="read">🎉 読んだ本 (読了)</option>
                 </select>
+              </div>
+
+              <!-- 表紙画像の編集・再取得 -->
+              <div>
+                <label class="block text-[10px] font-bold text-slate-400 mb-1">表紙画像</label>
+                <div class="flex gap-2.5 items-center">
+                  <div class="w-12 h-16 bg-slate-100 rounded-lg overflow-hidden shrink-0 border border-slate-200 flex items-center justify-center text-xl">
+                    <img v-if="editingBookModal.coverUrl" :src="editingBookModal.coverUrl" referrerpolicy="no-referrer" class="w-full h-full object-cover">
+                    <span v-else>📖</span>
+                  </div>
+                  <div class="flex-1 space-y-1">
+                    <input type="text" v-model="editingBookModal.coverUrl" placeholder="画像のURL" class="w-full border border-slate-200 rounded-xl p-1.5 text-xs bg-slate-50">
+                    <button type="button" @click="searchModalCover" class="text-[10px] bg-amber-200 hover:bg-amber-300 font-bold px-2.5 py-1 rounded-lg transition border border-amber-300/50">
+                      🔍 表紙を自動再検索する
+                    </button>
+                  </div>
+                </div>
               </div>
 
               <!-- 星評価 -->
@@ -712,7 +747,7 @@
               <!-- 感想 -->
               <div>
                 <label class="block text-[10px] font-bold text-slate-400 mb-1">読書メモ・感想</label>
-                <textarea v-model="editingBookModal.review" rows="4" placeholder="本の感想や心に残ったフレーズを自由に記録してください..." class="w-full border border-slate-200 rounded-xl p-2 text-xs bg-slate-50"></textarea>
+                <textarea v-model="editingBookModal.review" rows="3" placeholder="本の感想や心に残ったフレーズを自由に記録してください..." class="w-full border border-slate-200 rounded-xl p-2 text-xs bg-slate-50"></textarea>
               </div>
             </div>
 
@@ -935,7 +970,7 @@
         loadBooks() {
           const defaultBooks = [
             { id: 1, title: '成瀬は天下を取りに行く', author: '宮島未奈', price: 1705, status: 'want', coverUrl: 'https://books.google.com/books/content?id=OQG3EAAAQBAJ&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api', rating: 0, review: '' },
-            { id: 2, title: '理由のない光', author: '津村記久子', price: 1800, status: 'tsundoku', coverUrl: '', rating: 0, review: '気になって購入。今週末から読み始める予定！' },
+            { id: 2, title: '理由のない光', author: '津村記久子', price: 1800, status: 'tsundoku', coverUrl: 'https://books.google.com/books/content?id=6-f7EAAAQBAJ&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api', rating: 0, review: '気になって購入。今週末から読み始める予定！' },
             { id: 3, title: '汝、星のごとく', author: '町田そのこ', price: 1760, status: 'read', coverUrl: 'https://books.google.com/books/content?id=499_EAAAQBAJ&printsec=frontcover&img=1&zoom=1&edge=curl&source=gbs_api', rating: 5, review: 'ストーリー展開が素晴らしくて一気に読んでしまった。感動！' }
           ];
           const saved = localStorage.getItem('my_kakeibo_books');
@@ -943,7 +978,6 @@
             try {
               const parsed = JSON.parse(saved);
               if (Array.isArray(parsed)) {
-                // 旧形式データの互換性対応 (purchased boolean -> status)
                 return parsed.map(b => {
                   if (b.status) return b;
                   return {
@@ -977,26 +1011,55 @@
           }
           this.searchingCover = true;
           try {
-            const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(this.newBook.title.trim())}`);
+            const query = encodeURIComponent(this.newBook.title.trim());
+            const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${query}&maxResults=1`);
             const data = await res.json();
             if (data.items && data.items.length > 0) {
               const info = data.items[0].volumeInfo;
-              if (info.imageLinks && info.imageLinks.thumbnail) {
-                this.newBook.coverUrl = info.imageLinks.thumbnail.replace('http:', 'https:');
+              if (info.imageLinks) {
+                let url = info.imageLinks.thumbnail || info.imageLinks.smallThumbnail;
+                if (url) {
+                  this.newBook.coverUrl = url.replace(/^http:/, 'https:');
+                } else {
+                  alert('表紙画像が見つかりませんでした');
+                }
               } else {
-                alert('表紙画像が見つかりませんでした');
+                alert('この本の表紙画像は見つかりませんでした');
               }
               if (!this.newBook.author && info.authors) {
                 this.newBook.author = info.authors.join(', ');
               }
             } else {
-              alert('本が見つかりませんでした');
+              alert('該当する本が見つかりませんでした');
             }
           } catch(e) {
             console.error(e);
-            alert('表紙の検索に失敗しました');
+            alert('表紙の検索中にエラーが発生しました');
           } finally {
             this.searchingCover = false;
+          }
+        },
+        async searchModalCover() {
+          if (!this.editingBookModal || !this.editingBookModal.title) return;
+          try {
+            const query = encodeURIComponent(this.editingBookModal.title.trim());
+            const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${query}&maxResults=1`);
+            const data = await res.json();
+            if (data.items && data.items.length > 0) {
+              const info = data.items[0].volumeInfo;
+              if (info.imageLinks) {
+                let url = info.imageLinks.thumbnail || info.imageLinks.smallThumbnail;
+                if (url) {
+                  this.editingBookModal.coverUrl = url.replace(/^http:/, 'https:');
+                  this.editingBookModal.imageError = false;
+                }
+              }
+              if (!this.editingBookModal.author && info.authors) {
+                this.editingBookModal.author = info.authors.join(', ');
+              }
+            }
+          } catch(e) {
+            console.error(e);
           }
         },
         addBook() {
@@ -1012,7 +1075,8 @@
             status: this.newBook.status,
             coverUrl: this.newBook.coverUrl.trim(),
             rating: this.newBook.status === 'read' ? Number(this.newBook.rating) : 0,
-            review: this.newBook.review.trim()
+            review: this.newBook.review.trim(),
+            imageError: false
           });
           this.saveBooks();
           
