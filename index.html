@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>スマート家計簿</title>
-  <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
-  <script src="[https://unpkg.com/vue@3/dist/vue.global.js](https://unpkg.com/vue@3/dist/vue.global.js)"></script>
-  <link rel="stylesheet" href="[https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css](https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css)">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="bg-slate-100 min-h-screen pb-20 md:pb-8 text-slate-800">
   <div id="app" class="max-w-md md:max-w-5xl lg:max-w-6xl mx-auto px-0 md:px-6">
@@ -390,8 +390,8 @@
   </div>
 
   <script>
-    // ★ご自身のGAS WebアプリURLを設定してください (/exec で終わるURL)
-    const GAS_URL = 'https://script.google.com/macros/s/AKfycbxu0IZnDw3Y3E5FXRn02b2xFFa7x9BTRCij1_JpsCAbRYBivhk5pV7wIqRxJKCqQxw9/exec'; 
+    // ★【重要】ここにGASのWebアプリURLを設定してください (/exec で終わるURL)
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbxu0IZnDw3Y3E5FXRn02b2xFFa7x9BTRCij1_JpsCAbRYBivhk5pV7wIqRxJKCqQxw9/exec';
 
     Vue.createApp({
       data() {
@@ -590,7 +590,7 @@
           return str;
         },
         async fetchTransactions() {
-          if (!GAS_URL || GAS_URL === 'YOUR_GAS_WEB_APP_URL') return;
+          if (!GAS_URL || GAS_URL.includes('YOUR_GAS_WEB_APP_URL')) return;
           this.fetching = true;
           try {
             const res = await fetch(GAS_URL);
