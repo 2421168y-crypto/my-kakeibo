@@ -144,11 +144,11 @@
                 <div class="flex gap-2">
                   <label class="flex-1 py-1.5 text-center rounded-xl border font-bold text-xs cursor-pointer transition"
                          :class="form.type === 'expense' ? 'bg-rose-50 border-rose-200 text-rose-500' : 'border-slate-200 text-slate-400 hover:bg-slate-50'">
-                    <input type="radio" value="expense" v-model="form.type" @change="onTypeChange" class="hidden"> 支出
+                    <input type="radio" value="expense" v-model="form.type" class="hidden"> 支出
                   </label>
                   <label class="flex-1 py-1.5 text-center rounded-xl border font-bold text-xs cursor-pointer transition"
                          :class="form.type === 'income' ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'border-slate-200 text-slate-400 hover:bg-slate-50'">
-                    <input type="radio" value="income" v-model="form.type" @change="onTypeChange" class="hidden"> 収入
+                    <input type="radio" value="income" v-model="form.type" class="hidden"> 収入
                   </label>
                 </div>
 
@@ -166,19 +166,10 @@
                 <div class="grid grid-cols-2 gap-2">
                   <div>
                     <label class="block text-[11px] font-medium text-slate-500 mb-1">カテゴリ</label>
-                    <select v-model="form.category" class="w-full border border-slate-200 rounded-xl p-2 text-xs bg-slate-50/50 focus:bg-white focus:border-amber-300">
-                      <!-- 支出カテゴリー選択肢 -->
-                      <template v-if="form.type === 'expense'">
-                        <option v-for="plan in budgetPlans" :key="plan.category" :value="plan.category">
-                          {{ getCategoryIcon(plan.category) }} {{ plan.category }}
-                        </option>
-                      </template>
-                      <!-- 収入カテゴリー選択肢 -->
-                      <template v-else>
-                        <option v-for="cat in incomeCategories" :key="cat" :value="cat">
-                          {{ getCategoryIcon(cat) }} {{ cat }}
-                        </option>
-                      </template>
+                    <select v-model="form.category" class="w-full border border-slate-200 rounded-xl p-2 text-xs bg-slate-50/50 focus:bg-white focus:border-amber-300 font-bold">
+                      <option v-for="cat in currentCategories" :key="cat.name" :value="cat.name">
+                        {{ cat.label }}
+                      </option>
                     </select>
                   </div>
                   <div>
@@ -545,6 +536,19 @@
         }
       },
       computed: {
+        // 現在の収支タイプに応じたカテゴリーリストを動的に生成
+        currentCategories() {
+          if (this.form.type === 'income') {
+            return this.incomeCategories.map(cat => ({
+              name: cat,
+              label: `${this.getCategoryIcon(cat)} ${cat}`
+            }));
+          }
+          return this.budgetPlans.map(plan => ({
+            name: plan.category,
+            label: `${this.getCategoryIcon(plan.category)} ${plan.category}`
+          }));
+        },
         currentYearMonthLabel() {
           const [y, m] = this.selectedYearMonth.split('-');
           return `${y}年${Number(m)}月`;
@@ -606,19 +610,25 @@
           return days;
         }
       },
+      watch: {
+        // 支出/収入のラジオボタンが押されたら選択肢の初期値を自動で切り替える
+        'form.type'(newType) {
+          if (newType === 'income') {
+            if (!this.incomeCategories.includes(this.form.category)) {
+              this.form.category = this.incomeCategories[0] || '給料';
+            }
+          } else {
+            const validExpenseCats = this.budgetPlans.map(p => p.category);
+            if (!validExpenseCats.includes(this.form.category)) {
+              this.form.category = validExpenseCats[0] || '食費';
+            }
+          }
+        }
+      },
       mounted() {
         this.fetchTransactions();
       },
       methods: {
-        // --- 収支タイプ切り替え時の処理 ---
-        onTypeChange() {
-          if (this.form.type === 'expense') {
-            this.form.category = this.budgetPlans[0]?.category || '食費';
-          } else {
-            this.form.category = this.incomeCategories[0] || '給料';
-          }
-        },
-
         // --- カテゴリ用絵文字アイコン判定 ---
         getCategoryIcon(categoryName) {
           if (!categoryName) return '✨';
@@ -679,7 +689,6 @@
             try {
               const parsed = JSON.parse(saved);
               if (Array.isArray(parsed) && parsed.length > 0) {
-                // 古いデータに給与が含まれていたら除外して支出専用にする
                 return parsed.filter(p => p.category !== '給与' && p.category !== '給料');
               }
             } catch (e) {
@@ -910,6 +919,11 @@
           this.editingId = null;
           this.form.amount = '';
           this.form.memo = '';
+          if (this.form.type === 'income') {
+            this.form.category = '給料';
+          } else {
+            this.form.category = this.budgetPlans[0]?.category || '食費';
+          }
         },
         changeMonth(offset) {
           const [year, month] = this.selectedYearMonth.split('-').map(Number);
