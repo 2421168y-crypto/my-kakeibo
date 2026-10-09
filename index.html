@@ -3,37 +3,37 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>スマート家計簿</title>
+  <title>スマート家計簿 - 金運デザイン</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body class="bg-slate-100 min-h-screen pb-20 md:pb-8 text-slate-800">
+<body class="bg-amber-50/30 min-h-screen pb-20 md:pb-8 text-slate-800">
   <div id="app" class="max-w-md md:max-w-5xl lg:max-w-6xl mx-auto px-0 md:px-6">
 
-    <!-- ヘッダー -->
-    <header class="bg-indigo-600 text-white p-4 sticky top-0 z-10 shadow-md md:rounded-b-xl flex justify-between items-center">
-      <h1 class="font-bold text-lg flex items-center gap-2">
-        <i class="fa-solid fa-wallet"></i> マイ家計簿
+    <!-- ヘッダー（金運エメラルド×ゴールドグラデーション） -->
+    <header class="bg-gradient-to-r from-emerald-700 via-emerald-800 to-amber-600 text-white p-4 sticky top-0 z-10 shadow-lg md:rounded-b-xl flex justify-between items-center border-b border-amber-300/30">
+      <h1 class="font-bold text-lg flex items-center gap-2 tracking-wide">
+        <i class="fa-solid fa-coins text-amber-300 text-xl"></i> 金運マイ家計簿
       </h1>
 
       <!-- PC用ナビゲーション -->
-      <nav class="hidden md:flex gap-1 bg-indigo-700/50 p-1 rounded-lg">
+      <nav class="hidden md:flex gap-1 bg-emerald-900/40 p-1 rounded-lg border border-emerald-600/30">
         <button @click="currentTab = 'calendar'" class="px-4 py-1.5 rounded-md text-sm font-bold transition"
-                :class="currentTab === 'calendar' ? 'bg-white text-indigo-600 shadow' : 'text-indigo-100 hover:bg-indigo-600'">
+                :class="currentTab === 'calendar' ? 'bg-amber-400 text-emerald-950 shadow-md' : 'text-emerald-100 hover:bg-emerald-700'">
           <i class="fa-solid fa-receipt mr-1.5"></i>家計簿
         </button>
         <button @click="currentTab = 'plan'" class="px-4 py-1.5 rounded-md text-sm font-bold transition"
-                :class="currentTab === 'plan' ? 'bg-white text-indigo-600 shadow' : 'text-indigo-100 hover:bg-indigo-600'">
+                :class="currentTab === 'plan' ? 'bg-amber-400 text-emerald-950 shadow-md' : 'text-emerald-100 hover:bg-emerald-700'">
           <i class="fa-solid fa-chart-pie mr-1.5"></i>使用計画
         </button>
         <button @click="currentTab = 'savings'" class="px-4 py-1.5 rounded-md text-sm font-bold transition"
-                :class="currentTab === 'savings' ? 'bg-white text-indigo-600 shadow' : 'text-indigo-100 hover:bg-indigo-600'">
+                :class="currentTab === 'savings' ? 'bg-amber-400 text-emerald-950 shadow-md' : 'text-emerald-100 hover:bg-emerald-700'">
           <i class="fa-solid fa-piggy-bank mr-1.5"></i>貯金
         </button>
       </nav>
 
-      <button @click="fetchTransactions" class="text-xs bg-indigo-500 hover:bg-indigo-700 px-3 py-1.5 rounded-full border border-indigo-400 flex items-center gap-1.5">
+      <button @click="fetchTransactions" class="text-xs bg-amber-500 hover:bg-amber-400 text-amber-950 font-bold px-3.5 py-1.5 rounded-full border border-amber-300 shadow flex items-center gap-1.5 transition">
         <i class="fa-solid fa-rotate-right" :class="{'fa-spin': fetching}"></i>
         <span class="hidden md:inline">データ</span>更新
       </button>
@@ -45,20 +45,20 @@
       <section v-if="currentTab === 'calendar'" class="space-y-4">
 
         <!-- 月選択バー -->
-        <div class="bg-white p-3 rounded-xl shadow-sm flex justify-between items-center border border-slate-100">
-          <button @click="changeMonth(-1)" class="w-9 h-9 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 font-bold">
+        <div class="bg-white p-3 rounded-xl shadow-sm flex justify-between items-center border border-amber-200/60">
+          <button @click="changeMonth(-1)" class="w-9 h-9 rounded-lg bg-emerald-50 hover:bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold transition">
             <i class="fa-solid fa-chevron-left"></i>
           </button>
 
           <div class="flex items-center gap-2">
-            <i class="fa-regular fa-calendar text-indigo-600"></i>
+            <i class="fa-regular fa-calendar-check text-emerald-600 text-lg"></i>
             <span class="font-bold text-base md:text-lg text-slate-800">{{ currentYearMonthLabel }}</span>
-            <button v-if="selectedDateFilter" @click="selectedDateFilter = null" class="text-xs bg-rose-50 text-rose-600 border border-rose-200 px-2 py-0.5 rounded-full ml-2">
+            <button v-if="selectedDateFilter" @click="selectedDateFilter = null" class="text-xs bg-amber-100 text-amber-800 border border-amber-300 px-2 py-0.5 rounded-full ml-2 font-bold">
               日付解除 ({{ formatDateShort(selectedDateFilter) }}) ✕
             </button>
           </div>
 
-          <button @click="changeMonth(1)" class="w-9 h-9 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 font-bold">
+          <button @click="changeMonth(1)" class="w-9 h-9 rounded-lg bg-emerald-50 hover:bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold transition">
             <i class="fa-solid fa-chevron-right"></i>
           </button>
         </div>
@@ -70,32 +70,32 @@
           <div class="md:col-span-6 space-y-4">
             
             <!-- 当月サマリーカード -->
-            <div class="grid grid-cols-3 gap-2 bg-white p-4 rounded-xl shadow-sm text-center border border-slate-100">
+            <div class="grid grid-cols-3 gap-2 bg-gradient-to-br from-white to-emerald-50/50 p-4 rounded-xl shadow-sm text-center border border-emerald-100">
               <div>
-                <div class="text-xs text-slate-500">月収入</div>
+                <div class="text-xs font-bold text-emerald-800">月収入</div>
                 <div class="font-bold text-emerald-600 text-sm md:text-base mt-1">+¥{{ monthlyIncome.toLocaleString() }}</div>
               </div>
-              <div class="border-x border-slate-100">
-                <div class="text-xs text-slate-500">月支出</div>
+              <div class="border-x border-emerald-100">
+                <div class="text-xs font-bold text-slate-500">月支出</div>
                 <div class="font-bold text-rose-500 text-sm md:text-base mt-1">-¥{{ monthlyExpense.toLocaleString() }}</div>
               </div>
               <div>
-                <div class="text-xs text-slate-500">収支差額</div>
-                <div class="font-bold text-sm md:text-base mt-1" :class="monthlyBalance >= 0 ? 'text-indigo-600' : 'text-rose-600'">
+                <div class="text-xs font-bold text-amber-800">収支差額</div>
+                <div class="font-bold text-sm md:text-base mt-1" :class="monthlyBalance >= 0 ? 'text-amber-600' : 'text-rose-600'">
                   ¥{{ monthlyBalance.toLocaleString() }}
                 </div>
               </div>
             </div>
 
             <!-- 月間カレンダー -->
-            <div class="bg-white rounded-xl shadow-sm p-4 border border-slate-100">
-              <div class="text-xs font-bold text-slate-500 mb-2 flex justify-between items-center">
-                <span><i class="fa-solid fa-calendar-days text-indigo-600 mr-1"></i> 日別支出・収入カレンダー</span>
+            <div class="bg-white rounded-xl shadow-sm p-4 border border-emerald-100">
+              <div class="text-xs font-bold text-slate-600 mb-2 flex justify-between items-center">
+                <span><i class="fa-solid fa-calendar-days text-amber-500 mr-1"></i> 日別支出・収入カレンダー</span>
                 <span class="text-[10px] text-slate-400">日付選択で絞り込み</span>
               </div>
               
               <!-- 曜日ヘッダー -->
-              <div class="grid grid-cols-7 text-center text-[11px] font-bold py-1 border-b border-slate-100">
+              <div class="grid grid-cols-7 text-center text-[11px] font-bold py-1 border-b border-emerald-100 bg-emerald-50/60 rounded-t-lg">
                 <span class="text-rose-500">日</span>
                 <span>月</span>
                 <span>火</span>
@@ -111,12 +111,12 @@
                      @click="cell.day && selectDate(cell.dateStr)"
                      class="min-h-[52px] p-1 rounded-lg border text-left transition flex flex-col justify-between"
                      :class="[
-                       !cell.day ? 'border-transparent bg-transparent cursor-default' : 'cursor-pointer hover:border-indigo-400',
-                       cell.dateStr === selectedDateFilter ? 'bg-indigo-50 border-indigo-500 ring-2 ring-indigo-200' : 'border-slate-100 bg-slate-50/50'
+                       !cell.day ? 'border-transparent bg-transparent cursor-default' : 'cursor-pointer hover:border-amber-400 hover:bg-amber-50/40',
+                       cell.dateStr === selectedDateFilter ? 'bg-amber-100/60 border-amber-500 ring-2 ring-amber-300' : 'border-slate-100 bg-slate-50/50'
                      ]">
                   <template v-if="cell.day">
                     <span class="text-[11px] font-bold"
-                          :class="cell.isToday ? 'bg-indigo-600 text-white w-4 h-4 rounded-full flex items-center justify-center' : 'text-slate-600'">
+                          :class="cell.isToday ? 'bg-emerald-600 text-white w-4 h-4 rounded-full flex items-center justify-center shadow-sm' : 'text-slate-600'">
                       {{ cell.day }}
                     </span>
                     <div class="text-[9px] leading-tight space-y-0.5">
@@ -129,10 +129,10 @@
             </div>
 
             <!-- 登録 / 編集フォーム -->
-            <div class="bg-white rounded-xl shadow-sm overflow-hidden border border-slate-100" id="form-section">
-              <div class="p-3.5 font-bold text-slate-700 flex justify-between items-center bg-slate-50 border-b border-slate-100">
-                <span class="text-sm">
-                  <i class="fa-solid mr-2" :class="isEditing ? 'fa-pen-to-square text-amber-500' : 'fa-plus-circle text-indigo-600'"></i>
+            <div class="bg-white rounded-xl shadow-sm overflow-hidden border border-amber-200/80" id="form-section">
+              <div class="p-3.5 font-bold text-slate-800 flex justify-between items-center bg-gradient-to-r from-amber-100/60 to-emerald-50 border-b border-amber-200/60">
+                <span class="text-sm flex items-center gap-1.5">
+                  <i class="fa-solid" :class="isEditing ? 'fa-pen-to-square text-amber-600' : 'fa-plus-circle text-emerald-600'"></i>
                   {{ isEditing ? 'データを編集する' : '収支を記録する' }}
                 </span>
                 <button v-if="isEditing" @click="cancelEdit" class="text-xs bg-slate-200 hover:bg-slate-300 text-slate-600 px-2 py-1 rounded">
@@ -155,18 +155,18 @@
                 <div class="grid grid-cols-2 gap-2">
                   <div>
                     <label class="block text-[11px] font-medium text-slate-600 mb-1">日付</label>
-                    <input type="date" v-model="form.date" required class="w-full border rounded-lg p-2 text-xs bg-slate-50">
+                    <input type="date" v-model="form.date" required class="w-full border rounded-lg p-2 text-xs bg-slate-50 focus:bg-white focus:border-amber-400">
                   </div>
                   <div>
                     <label class="block text-[11px] font-medium text-slate-600 mb-1">金額 (円)</label>
-                    <input type="number" v-model.number="form.amount" placeholder="1000" required class="w-full border rounded-lg p-2 text-xs bg-slate-50">
+                    <input type="number" v-model.number="form.amount" placeholder="1000" required class="w-full border rounded-lg p-2 text-xs bg-slate-50 focus:bg-white focus:border-amber-400">
                   </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-2">
                   <div>
                     <label class="block text-[11px] font-medium text-slate-600 mb-1">カテゴリ</label>
-                    <select v-model="form.category" class="w-full border rounded-lg p-2 text-xs bg-slate-50">
+                    <select v-model="form.category" class="w-full border rounded-lg p-2 text-xs bg-slate-50 focus:bg-white focus:border-amber-400">
                       <option v-for="plan in budgetPlans" :key="plan.category" :value="plan.category">
                         {{ plan.category }}
                       </option>
@@ -174,14 +174,15 @@
                   </div>
                   <div>
                     <label class="block text-[11px] font-medium text-slate-600 mb-1">メモ</label>
-                    <input type="text" v-model="form.memo" placeholder="買い物メモなど" class="w-full border rounded-lg p-2 text-xs bg-slate-50">
+                    <input type="text" v-model="form.memo" placeholder="買い物メモなど" class="w-full border rounded-lg p-2 text-xs bg-slate-50 focus:bg-white focus:border-amber-400">
                   </div>
                 </div>
 
                 <button type="submit" :disabled="loading"
-                        class="w-full py-2 rounded-lg font-bold text-sm text-white transition shadow-sm disabled:opacity-50"
-                        :class="isEditing ? 'bg-amber-500 hover:bg-amber-600' : 'bg-indigo-600 hover:bg-indigo-700'">
-                  {{ loading ? '処理中...' : (isEditing ? '変更を保存する' : '追加する') }}
+                        class="w-full py-2.5 rounded-lg font-bold text-sm transition shadow-sm disabled:opacity-50 text-emerald-950"
+                        :class="isEditing ? 'bg-amber-400 hover:bg-amber-500' : 'bg-amber-400 hover:bg-amber-500 border border-amber-300'">
+                  <i class="fa-solid fa-coins mr-1"></i>
+                  {{ loading ? '処理中...' : (isEditing ? '変更を保存する' : '記録を追加する') }}
                 </button>
               </form>
             </div>
@@ -189,14 +190,14 @@
           </div>
 
           <!-- 右側: 利用履歴一覧（編集・削除機能付き） -->
-          <div class="md:col-span-6 bg-white rounded-xl shadow-sm p-4 border border-slate-100">
-            <div class="flex justify-between items-center pb-3 border-b border-slate-100 mb-3">
+          <div class="md:col-span-6 bg-white rounded-xl shadow-sm p-4 border border-emerald-100">
+            <div class="flex justify-between items-center pb-3 border-b border-emerald-100 mb-3">
               <h2 class="font-bold text-slate-700 text-sm md:text-base">
-                <i class="fa-regular fa-list-alt text-indigo-600 mr-1.5"></i>
+                <i class="fa-regular fa-list-alt text-emerald-600 mr-1.5"></i>
                 <span v-if="selectedDateFilter">{{ formatDateShort(selectedDateFilter) }} の履歴</span>
                 <span v-else>{{ currentYearMonthLabel }} の履歴</span>
               </h2>
-              <span class="text-xs text-slate-400">全 {{ filteredTransactions.length }} 件</span>
+              <span class="text-xs text-slate-400 font-bold">全 {{ filteredTransactions.length }} 件</span>
             </div>
 
             <div v-if="fetching" class="text-center py-12 text-slate-400 text-sm">データ読み込み中...</div>
@@ -204,11 +205,11 @@
               {{ selectedDateFilter ? 'この日のデータはありません' : '今月のデータはありません' }}
             </div>
             
-            <ul v-else class="divide-y divide-slate-100 max-h-[520px] overflow-y-auto pr-1">
-              <li v-for="item in filteredTransactions" :key="item.id" class="py-2.5 flex justify-between items-center hover:bg-slate-50 px-2 rounded-lg transition group">
+            <ul v-else class="divide-y divide-emerald-50 max-h-[520px] overflow-y-auto pr-1">
+              <li v-for="item in filteredTransactions" :key="item.id" class="py-2.5 flex justify-between items-center hover:bg-amber-50/30 px-2 rounded-lg transition group">
                 <div class="flex items-center gap-2.5">
                   <div class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
-                       :class="item.type === 'expense' ? 'bg-rose-100 text-rose-600' : 'bg-emerald-100 text-emerald-600'">
+                       :class="item.type === 'expense' ? 'bg-rose-100 text-rose-600' : 'bg-emerald-100 text-emerald-700'">
                     {{ item.category ? item.category.slice(0, 1) : '他' }}
                   </div>
                   <div>
@@ -224,7 +225,7 @@
 
                   <!-- 編集・削除ボタン -->
                   <div class="flex gap-1">
-                    <button @click="editTransaction(item)" class="w-7 h-7 rounded text-slate-400 hover:text-amber-500 hover:bg-amber-50 flex items-center justify-center transition" title="編集">
+                    <button @click="editTransaction(item)" class="w-7 h-7 rounded text-slate-400 hover:text-amber-600 hover:bg-amber-100 flex items-center justify-center transition" title="編集">
                       <i class="fa-solid fa-pen text-xs"></i>
                     </button>
                     <button @click="deleteTransaction(item.id)" class="w-7 h-7 rounded text-slate-400 hover:text-rose-500 hover:bg-rose-50 flex items-center justify-center transition" title="削除">
@@ -244,23 +245,25 @@
       <section v-if="currentTab === 'plan'" class="space-y-4">
         
         <!-- ヘッダー & 新規カテゴリ追加エリア -->
-        <div class="bg-white rounded-xl shadow-sm p-4 md:p-6 border border-slate-100 space-y-4">
+        <div class="bg-white rounded-xl shadow-sm p-4 md:p-6 border border-emerald-100 space-y-4">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h2 class="font-bold text-slate-800 text-base md:text-lg mb-1">今月の使用計画 & カテゴリ設定</h2>
+              <h2 class="font-bold text-slate-800 text-base md:text-lg mb-1 flex items-center gap-2">
+                <i class="fa-solid fa-chart-pie text-emerald-600"></i> 今月の使用計画 & カテゴリ設定
+              </h2>
               <p class="text-xs text-slate-400">カテゴリごとの予算設定、カテゴリの追加・削除・名前変更ができます</p>
             </div>
             
             <button @click="showAddCategoryForm = !showAddCategoryForm" 
-                    class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-3 py-2 rounded-lg flex items-center justify-center gap-1.5 transition shrink-0">
+                    class="text-xs bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-3 py-2 rounded-lg flex items-center justify-center gap-1.5 transition shrink-0 shadow-sm">
               <i class="fa-solid" :class="showAddCategoryForm ? 'fa-minus' : 'fa-plus'"></i>
               {{ showAddCategoryForm ? 'フォームを閉じる' : 'カテゴリを追加' }}
             </button>
           </div>
 
           <!-- 新規カテゴリ追加フォーム -->
-          <div v-if="showAddCategoryForm" class="bg-indigo-50/60 p-4 rounded-xl border border-indigo-100 space-y-3">
-            <div class="font-bold text-xs text-indigo-900">新しいカテゴリの追加</div>
+          <div v-if="showAddCategoryForm" class="bg-gradient-to-r from-amber-50 to-emerald-50 p-4 rounded-xl border border-amber-200 space-y-3">
+            <div class="font-bold text-xs text-emerald-900">新しいカテゴリの追加</div>
             <div class="grid grid-cols-1 sm:grid-cols-12 gap-2">
               <div class="sm:col-span-6">
                 <label class="block text-[10px] font-bold text-slate-500 mb-1">カテゴリ名</label>
@@ -271,7 +274,7 @@
                 <input type="number" v-model.number="newCat.target" placeholder="10000" class="w-full border rounded-lg p-2 text-xs bg-white">
               </div>
               <div class="sm:col-span-2 flex items-end">
-                <button @click="addCategory" class="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-lg transition">
+                <button @click="addCategory" class="w-full py-2 bg-amber-400 hover:bg-amber-500 text-amber-950 font-bold text-xs rounded-lg transition shadow-sm">
                   追加
                 </button>
               </div>
@@ -281,7 +284,7 @@
 
         <!-- カテゴリ別予算一覧カード -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div v-for="(plan, index) in budgetPlans" :key="index" class="bg-white p-4 border border-slate-100 rounded-xl shadow-sm space-y-3">
+          <div v-for="(plan, index) in budgetPlans" :key="index" class="bg-white p-4 border border-emerald-100 rounded-xl shadow-sm space-y-3">
             
             <!-- カードヘッダー（名前表示・名前編集・削除） -->
             <div class="flex justify-between items-center">
@@ -295,7 +298,7 @@
               <!-- 通常表示 -->
               <div v-else class="flex items-center gap-2">
                 <span class="font-bold text-sm text-slate-800">{{ plan.category }}</span>
-                <button @click="startEditCategory(index, plan.category)" class="text-slate-400 hover:text-amber-500 text-xs px-1" title="名前を変更">
+                <button @click="startEditCategory(index, plan.category)" class="text-slate-400 hover:text-amber-600 text-xs px-1" title="名前を変更">
                   <i class="fa-solid fa-pen"></i>
                 </button>
               </div>
@@ -317,7 +320,7 @@
                 <input type="number" 
                        v-model.number="plan.target" 
                        @change="saveBudgetPlans" 
-                       class="w-24 border rounded px-1.5 py-1 text-right font-bold text-xs bg-slate-50 focus:bg-white focus:border-indigo-500" 
+                       class="w-24 border rounded px-1.5 py-1 text-right font-bold text-xs bg-amber-50/40 focus:bg-white focus:border-amber-400" 
                        step="1000" min="0">
               </div>
             </div>
@@ -326,7 +329,7 @@
             <div class="space-y-1">
               <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden border border-slate-100">
                 <div class="h-2.5 rounded-full transition-all duration-300"
-                     :class="plan.target > 0 && getCategorySpent(plan.category) > plan.target ? 'bg-rose-500' : 'bg-indigo-600'"
+                     :class="plan.target > 0 && getCategorySpent(plan.category) > plan.target ? 'bg-rose-500' : 'bg-gradient-to-r from-emerald-500 to-amber-400'"
                      :style="{ width: plan.target > 0 ? Math.min((getCategorySpent(plan.category) / plan.target) * 100, 100) + '%' : '0%' }">
                 </div>
               </div>
@@ -346,23 +349,25 @@
       <section v-if="currentTab === 'savings'" class="space-y-4">
         
         <!-- ヘッダー & 新規目標追加エリア -->
-        <div class="bg-white rounded-xl shadow-sm p-4 md:p-6 border border-slate-100 space-y-4">
+        <div class="bg-white rounded-xl shadow-sm p-4 md:p-6 border border-emerald-100 space-y-4">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h2 class="font-bold text-slate-800 text-base md:text-lg mb-1">貯金目標・資産管理</h2>
+              <h2 class="font-bold text-slate-800 text-base md:text-lg mb-1 flex items-center gap-2">
+                <i class="fa-solid fa-piggy-bank text-amber-500 text-xl"></i> 貯金目標・資産管理
+              </h2>
               <p class="text-xs text-slate-400">目標金額に向けた進捗管理、目標の追加・編集・削除ができます</p>
             </div>
             
             <button @click="showAddSavingsForm = !showAddSavingsForm" 
-                    class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-3 py-2 rounded-lg flex items-center justify-center gap-1.5 transition shrink-0">
+                    class="text-xs bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-3 py-2 rounded-lg flex items-center justify-center gap-1.5 transition shrink-0 shadow-sm">
               <i class="fa-solid" :class="showAddSavingsForm ? 'fa-minus' : 'fa-plus'"></i>
               {{ showAddSavingsForm ? 'フォームを閉じる' : '目標を追加' }}
             </button>
           </div>
 
           <!-- 新規目標追加フォーム -->
-          <div v-if="showAddSavingsForm" class="bg-indigo-50/60 p-4 rounded-xl border border-indigo-100 space-y-3">
-            <div class="font-bold text-xs text-indigo-900">新しい貯金目標の追加</div>
+          <div v-if="showAddSavingsForm" class="bg-gradient-to-r from-amber-50 to-emerald-50 p-4 rounded-xl border border-amber-200 space-y-3">
+            <div class="font-bold text-xs text-emerald-900">新しい貯金目標の追加</div>
             <div class="grid grid-cols-1 sm:grid-cols-12 gap-2">
               <div class="sm:col-span-5">
                 <label class="block text-[10px] font-bold text-slate-500 mb-1">目標名</label>
@@ -377,7 +382,7 @@
                 <input type="number" v-model.number="newGoal.target" placeholder="100000" class="w-full border rounded-lg p-2 text-xs bg-white">
               </div>
               <div class="sm:col-span-1 flex items-end">
-                <button @click="addSavingsGoal" class="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-lg transition">
+                <button @click="addSavingsGoal" class="w-full py-2 bg-amber-400 hover:bg-amber-500 text-amber-950 font-bold text-xs rounded-lg transition shadow-sm">
                   追加
                 </button>
               </div>
@@ -387,7 +392,7 @@
 
         <!-- 目標カード一覧 -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div v-for="(item, index) in savingsGoals" :key="index" class="border border-slate-100 p-4 rounded-xl bg-white shadow-sm space-y-3">
+          <div v-for="(item, index) in savingsGoals" :key="index" class="border border-amber-200/60 p-4 rounded-xl bg-white shadow-sm space-y-3">
             
             <!-- カードヘッダー（タイトル・名前編集・削除） -->
             <div class="flex justify-between items-center">
@@ -400,14 +405,14 @@
 
               <!-- 通常表示 -->
               <div v-else class="flex items-center gap-2">
-                <span class="font-bold text-sm text-slate-800"><i class="fa-solid fa-piggy-bank text-amber-500 mr-1.5"></i>{{ item.title }}</span>
-                <button @click="startEditSavingsGoal(index, item.title)" class="text-slate-400 hover:text-amber-500 text-xs px-1" title="名前を変更">
+                <span class="font-bold text-sm text-slate-800"><i class="fa-solid fa-coins text-amber-500 mr-1.5"></i>{{ item.title }}</span>
+                <button @click="startEditSavingsGoal(index, item.title)" class="text-slate-400 hover:text-amber-600 text-xs px-1" title="名前を変更">
                   <i class="fa-solid fa-pen"></i>
                 </button>
               </div>
 
               <div class="flex items-center gap-2">
-                <span class="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full shrink-0">
+                <span class="text-xs font-bold text-emerald-800 bg-amber-100/80 px-2 py-0.5 rounded-full shrink-0 border border-amber-200">
                   {{ item.target > 0 ? Math.round((item.current / item.target) * 100) : 0 }}% 達成
                 </span>
                 <button @click="deleteSavingsGoal(index)" class="text-slate-300 hover:text-rose-500 text-xs p-1" title="目標を削除">
@@ -418,7 +423,7 @@
 
             <!-- 進捗バー -->
             <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden border border-slate-100">
-              <div class="bg-amber-500 h-2.5 rounded-full transition-all duration-300" 
+              <div class="bg-gradient-to-r from-amber-400 to-amber-500 h-2.5 rounded-full transition-all duration-300" 
                    :style="{ width: item.target > 0 ? Math.min((item.current / item.target) * 100, 100) + '%' : '0%' }"></div>
             </div>
 
@@ -429,20 +434,20 @@
                 <input type="number" 
                        v-model.number="item.current" 
                        @change="saveSavingsGoals" 
-                       class="w-full border rounded px-2 py-1 font-bold text-slate-700 bg-slate-50 focus:bg-white focus:border-indigo-500">
+                       class="w-full border rounded px-2 py-1 font-bold text-emerald-800 bg-emerald-50/30 focus:bg-white focus:border-amber-400">
               </div>
               <div>
                 <label class="block text-[10px] text-slate-400 mb-0.5">目標金額 (円)</label>
                 <input type="number" 
                        v-model.number="item.target" 
                        @change="saveSavingsGoals" 
-                       class="w-full border rounded px-2 py-1 font-bold text-slate-700 bg-slate-50 focus:bg-white focus:border-indigo-500">
+                       class="w-full border rounded px-2 py-1 font-bold text-slate-700 bg-amber-50/30 focus:bg-white focus:border-amber-400">
               </div>
             </div>
 
             <!-- 残り金額表示 -->
             <div class="text-[10px] text-slate-400 text-right">
-              <span v-if="item.target - item.current <= 0" class="text-emerald-600 font-bold">🎉 目標達成！</span>
+              <span v-if="item.target - item.current <= 0" class="text-emerald-600 font-bold">🎉 目標達成！金運アップ！</span>
               <span v-else>あと ¥{{ (item.target - item.current).toLocaleString() }}</span>
             </div>
 
@@ -453,20 +458,20 @@
     </main>
 
     <!-- 下部固定タブナビゲーションバー (スマホのみ表示) -->
-    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around p-2 z-20 shadow-lg md:hidden">
-      <button @click="currentTab = 'calendar'" class="flex-1 flex flex-col items-center py-1 text-xs"
-              :class="currentTab === 'calendar' ? 'text-indigo-600 font-bold' : 'text-slate-400'">
-        <i class="fa-solid fa-receipt text-base mb-1"></i>
+    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-emerald-100 flex justify-around p-2 z-20 shadow-lg md:hidden">
+      <button @click="currentTab = 'calendar'" class="flex-1 flex flex-col items-center py-1 text-xs font-bold"
+              :class="currentTab === 'calendar' ? 'text-emerald-700' : 'text-slate-400'">
+        <i class="fa-solid fa-receipt text-base mb-1" :class="currentTab === 'calendar' ? 'text-amber-500' : ''"></i>
         家計簿
       </button>
-      <button @click="currentTab = 'plan'" class="flex-1 flex flex-col items-center py-1 text-xs"
-              :class="currentTab === 'plan' ? 'text-indigo-600 font-bold' : 'text-slate-400'">
-        <i class="fa-solid fa-chart-pie text-base mb-1"></i>
+      <button @click="currentTab = 'plan'" class="flex-1 flex flex-col items-center py-1 text-xs font-bold"
+              :class="currentTab === 'plan' ? 'text-emerald-700' : 'text-slate-400'">
+        <i class="fa-solid fa-chart-pie text-base mb-1" :class="currentTab === 'plan' ? 'text-amber-500' : ''"></i>
         使用計画
       </button>
-      <button @click="currentTab = 'savings'" class="flex-1 flex flex-col items-center py-1 text-xs"
-              :class="currentTab === 'savings' ? 'text-indigo-600 font-bold' : 'text-slate-400'">
-        <i class="fa-solid fa-piggy-bank text-base mb-1"></i>
+      <button @click="currentTab = 'savings'" class="flex-1 flex flex-col items-center py-1 text-xs font-bold"
+              :class="currentTab === 'savings' ? 'text-emerald-700' : 'text-slate-400'">
+        <i class="fa-solid fa-piggy-bank text-base mb-1" :class="currentTab === 'savings' ? 'text-amber-500' : ''"></i>
         貯金
       </button>
     </nav>
