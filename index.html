@@ -343,25 +343,109 @@
       </section>
 
       <!-- ================= 画面3: 貯金管理 ================= -->
-      <section v-if="currentTab === 'savings'" class="bg-white rounded-xl shadow-sm p-6 border border-slate-100 space-y-4">
-        <div>
-          <h2 class="font-bold text-slate-800 text-base md:text-lg mb-1">貯金目標・資産管理</h2>
-          <p class="text-xs text-slate-400">目標金額に向けた進捗状況</p>
+      <section v-if="currentTab === 'savings'" class="space-y-4">
+        
+        <!-- ヘッダー & 新規目標追加エリア -->
+        <div class="bg-white rounded-xl shadow-sm p-4 md:p-6 border border-slate-100 space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h2 class="font-bold text-slate-800 text-base md:text-lg mb-1">貯金目標・資産管理</h2>
+              <p class="text-xs text-slate-400">目標金額に向けた進捗管理、目標の追加・編集・削除ができます</p>
+            </div>
+            
+            <button @click="showAddSavingsForm = !showAddSavingsForm" 
+                    class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-3 py-2 rounded-lg flex items-center justify-center gap-1.5 transition shrink-0">
+              <i class="fa-solid" :class="showAddSavingsForm ? 'fa-minus' : 'fa-plus'"></i>
+              {{ showAddSavingsForm ? 'フォームを閉じる' : '目標を追加' }}
+            </button>
+          </div>
+
+          <!-- 新規目標追加フォーム -->
+          <div v-if="showAddSavingsForm" class="bg-indigo-50/60 p-4 rounded-xl border border-indigo-100 space-y-3">
+            <div class="font-bold text-xs text-indigo-900">新しい貯金目標の追加</div>
+            <div class="grid grid-cols-1 sm:grid-cols-12 gap-2">
+              <div class="sm:col-span-5">
+                <label class="block text-[10px] font-bold text-slate-500 mb-1">目標名</label>
+                <input type="text" v-model="newGoal.title" placeholder="例: 車の購入資金" class="w-full border rounded-lg p-2 text-xs bg-white">
+              </div>
+              <div class="sm:col-span-3">
+                <label class="block text-[10px] font-bold text-slate-500 mb-1">現在の貯金 (円)</label>
+                <input type="number" v-model.number="newGoal.current" placeholder="0" class="w-full border rounded-lg p-2 text-xs bg-white">
+              </div>
+              <div class="sm:col-span-3">
+                <label class="block text-[10px] font-bold text-slate-500 mb-1">目標金額 (円)</label>
+                <input type="number" v-model.number="newGoal.target" placeholder="100000" class="w-full border rounded-lg p-2 text-xs bg-white">
+              </div>
+              <div class="sm:col-span-1 flex items-end">
+                <button @click="addSavingsGoal" class="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-lg transition">
+                  追加
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
-          <div v-for="item in savingsGoals" :key="item.title" class="border border-slate-100 p-4 rounded-xl bg-slate-50 space-y-3">
+        <!-- 目標カード一覧 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div v-for="(item, index) in savingsGoals" :key="index" class="border border-slate-100 p-4 rounded-xl bg-white shadow-sm space-y-3">
+            
+            <!-- カードヘッダー（タイトル・名前編集・削除） -->
             <div class="flex justify-between items-center">
-              <span class="font-bold text-sm text-slate-700"><i class="fa-solid fa-piggy-bank text-amber-500 mr-2"></i>{{ item.title }}</span>
-              <span class="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">{{ Math.round((item.current / item.target) * 100) }}% 達成</span>
+              <!-- 名前編集モード -->
+              <div v-if="editingSavingsIndex === index" class="flex items-center gap-2 flex-1 mr-2">
+                <input type="text" v-model="editingSavingsTitle" class="border rounded px-2 py-1 text-xs font-bold w-full bg-slate-50">
+                <button @click="saveSavingsTitle(index)" class="bg-emerald-600 text-white text-[10px] font-bold px-2 py-1 rounded hover:bg-emerald-700 shrink-0">保存</button>
+                <button @click="editingSavingsIndex = null" class="bg-slate-200 text-slate-600 text-[10px] font-bold px-2 py-1 rounded hover:bg-slate-300 shrink-0">取消</button>
+              </div>
+
+              <!-- 通常表示 -->
+              <div v-else class="flex items-center gap-2">
+                <span class="font-bold text-sm text-slate-800"><i class="fa-solid fa-piggy-bank text-amber-500 mr-1.5"></i>{{ item.title }}</span>
+                <button @click="startEditSavingsGoal(index, item.title)" class="text-slate-400 hover:text-amber-500 text-xs px-1" title="名前を変更">
+                  <i class="fa-solid fa-pen"></i>
+                </button>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full shrink-0">
+                  {{ item.target > 0 ? Math.round((item.current / item.target) * 100) : 0 }}% 達成
+                </span>
+                <button @click="deleteSavingsGoal(index)" class="text-slate-300 hover:text-rose-500 text-xs p-1" title="目標を削除">
+                  <i class="fa-solid fa-trash"></i>
+                </button>
+              </div>
             </div>
-            <div class="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
-              <div class="bg-amber-500 h-2 rounded-full" :style="{ width: (item.current / item.target) * 100 + '%' }"></div>
+
+            <!-- 進捗バー -->
+            <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden border border-slate-100">
+              <div class="bg-amber-500 h-2.5 rounded-full transition-all duration-300" 
+                   :style="{ width: item.target > 0 ? Math.min((item.current / item.target) * 100, 100) + '%' : '0%' }"></div>
             </div>
-            <div class="flex justify-between text-xs text-slate-500 pt-1">
-              <span>現在: ¥{{ item.current.toLocaleString() }}</span>
-              <span>目標: ¥{{ item.target.toLocaleString() }}</span>
+
+            <!-- 金額編集入力欄 -->
+            <div class="grid grid-cols-2 gap-2 pt-1 text-xs">
+              <div>
+                <label class="block text-[10px] text-slate-400 mb-0.5">現在の貯金額 (円)</label>
+                <input type="number" 
+                       v-model.number="item.current" 
+                       @change="saveSavingsGoals" 
+                       class="w-full border rounded px-2 py-1 font-bold text-slate-700 bg-slate-50 focus:bg-white focus:border-indigo-500">
+              </div>
+              <div>
+                <label class="block text-[10px] text-slate-400 mb-0.5">目標金額 (円)</label>
+                <input type="number" 
+                       v-model.number="item.target" 
+                       @change="saveSavingsGoals" 
+                       class="w-full border rounded px-2 py-1 font-bold text-slate-700 bg-slate-50 focus:bg-white focus:border-indigo-500">
+              </div>
             </div>
+
+            <!-- 残り金額表示 -->
+            <div class="text-[10px] text-slate-400 text-right">
+              <span v-if="item.target - item.current <= 0" class="text-emerald-600 font-bold">🎉 目標達成！</span>
+              <span v-else>あと ¥{{ (item.target - item.current).toLocaleString() }}</span>
+            </div>
+
           </div>
         </div>
       </section>
@@ -409,6 +493,8 @@
           selectedDateFilter: null,
           isEditing: false,
           editingId: null,
+          
+          // 使用計画・カテゴリ用
           showAddCategoryForm: false,
           editingCategoryIndex: null,
           editingCategoryName: '',
@@ -417,17 +503,25 @@
             target: 10000
           },
           budgetPlans: this.loadBudgetPlans(),
+          
+          // 貯金目標用
+          showAddSavingsForm: false,
+          editingSavingsIndex: null,
+          editingSavingsTitle: '',
+          newGoal: {
+            title: '',
+            current: 0,
+            target: 100000
+          },
+          savingsGoals: this.loadSavingsGoals(),
+
           form: {
             date: `${yyyy}-${mm}-${dd}`,
             type: 'expense',
             amount: '',
             category: '食費',
             memo: ''
-          },
-          savingsGoals: [
-            { title: '旅行資金', current: 60000, target: 150000 },
-            { title: '緊急予備資金', current: 200000, target: 500000 }
-          ]
+          }
         }
       },
       computed: {
@@ -496,6 +590,7 @@
         this.fetchTransactions();
       },
       methods: {
+        // --- 予算計画・カテゴリ関連 ---
         loadBudgetPlans() {
           const defaultPlans = [
             { category: '食費', target: 40000 },
@@ -569,6 +664,78 @@
           this.editingCategoryIndex = null;
           this.editingCategoryName = '';
         },
+
+        // --- 貯金目標関連 ---
+        loadSavingsGoals() {
+          const defaultGoals = [
+            { title: '旅行資金', current: 60000, target: 150000 },
+            { title: '緊急予備資金', current: 200000, target: 500000 }
+          ];
+          const saved = localStorage.getItem('my_kakeibo_savings_goals');
+          if (saved) {
+            try {
+              const parsed = JSON.parse(saved);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                return parsed;
+              }
+            } catch (e) {
+              console.error(e);
+            }
+          }
+          return defaultGoals;
+        },
+        saveSavingsGoals() {
+          localStorage.setItem('my_kakeibo_savings_goals', JSON.stringify(this.savingsGoals));
+        },
+        addSavingsGoal() {
+          if (!this.newGoal.title.trim()) {
+            alert('目標名を入力してください');
+            return;
+          }
+          if (this.savingsGoals.some(g => g.title === this.newGoal.title.trim())) {
+            alert('同名の目標がすでに存在します');
+            return;
+          }
+          this.savingsGoals.push({
+            title: this.newGoal.title.trim(),
+            current: Number(this.newGoal.current) || 0,
+            target: Number(this.newGoal.target) || 0
+          });
+          this.saveSavingsGoals();
+          this.newGoal.title = '';
+          this.newGoal.current = 0;
+          this.newGoal.target = 100000;
+          this.showAddSavingsForm = false;
+        },
+        deleteSavingsGoal(index) {
+          const title = this.savingsGoals[index].title;
+          if (confirm(`貯金目標「${title}」を削除してもよろしいですか？`)) {
+            this.savingsGoals.splice(index, 1);
+            this.saveSavingsGoals();
+          }
+        },
+        startEditSavingsGoal(index, currentTitle) {
+          this.editingSavingsIndex = index;
+          this.editingSavingsTitle = currentTitle;
+        },
+        saveSavingsTitle(index) {
+          const newTitle = this.editingSavingsTitle.trim();
+          if (!newTitle) {
+            alert('目標名を入力してください');
+            return;
+          }
+          const oldTitle = this.savingsGoals[index].title;
+          if (newTitle !== oldTitle && this.savingsGoals.some(g => g.title === newTitle)) {
+            alert('同名の目標がすでに存在します');
+            return;
+          }
+          this.savingsGoals[index].title = newTitle;
+          this.saveSavingsGoals();
+          this.editingSavingsIndex = null;
+          this.editingSavingsTitle = '';
+        },
+
+        // --- 家計簿取引処理関連 ---
         cleanDate(rawDate) {
           if (!rawDate) return '';
           let str = String(rawDate).trim();
