@@ -6,9 +6,10 @@
   <title>YUI 家計簿</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.3.4/vue.global.prod.min.js"></script>
+  <!-- グラフ表示用 Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    /* 読み込み遅延時の真っ白化を防止するスムーズな表示設定 */
     [v-cloak] { opacity: 0; }
     #app { transition: opacity 0.2s ease-in; }
   </style>
@@ -24,19 +25,23 @@
 
       <!-- PC用ナビゲーション -->
       <nav class="hidden md:flex gap-1 bg-white/70 p-1 rounded-xl border border-emerald-100 backdrop-blur-sm">
-        <button @click="currentTab = 'calendar'" class="px-3.5 py-1.5 rounded-lg text-sm font-bold transition"
+        <button @click="switchTab('calendar')" class="px-3 py-1.5 rounded-lg text-sm font-bold transition"
                 :class="currentTab === 'calendar' ? 'bg-amber-200/70 text-slate-800 shadow-sm' : 'text-slate-600 hover:bg-emerald-50'">
           <i class="fa-solid fa-receipt mr-1 text-emerald-500"></i>家計簿
         </button>
-        <button @click="currentTab = 'plan'" class="px-3.5 py-1.5 rounded-md text-sm font-bold transition"
-                :class="currentTab === 'plan' ? 'bg-amber-200/70 text-slate-800 shadow-sm' : 'text-slate-600 hover:bg-emerald-50'">
-          <i class="fa-solid fa-chart-pie mr-1 text-emerald-500"></i>使用計画
+        <button @click="switchTab('report')" class="px-3 py-1.5 rounded-lg text-sm font-bold transition"
+                :class="currentTab === 'report' ? 'bg-amber-200/70 text-slate-800 shadow-sm' : 'text-slate-600 hover:bg-emerald-50'">
+          <i class="fa-solid fa-chart-pie mr-1 text-emerald-500"></i>振り返り
         </button>
-        <button @click="currentTab = 'savings'" class="px-3.5 py-1.5 rounded-md text-sm font-bold transition"
+        <button @click="switchTab('plan')" class="px-3 py-1.5 rounded-md text-sm font-bold transition"
+                :class="currentTab === 'plan' ? 'bg-amber-200/70 text-slate-800 shadow-sm' : 'text-slate-600 hover:bg-emerald-50'">
+          <i class="fa-solid fa-sliders mr-1 text-emerald-500"></i>使用計画
+        </button>
+        <button @click="switchTab('savings')" class="px-3 py-1.5 rounded-md text-sm font-bold transition"
                 :class="currentTab === 'savings' ? 'bg-amber-200/70 text-slate-800 shadow-sm' : 'text-slate-600 hover:bg-emerald-50'">
           <i class="fa-solid fa-piggy-bank mr-1 text-emerald-500"></i>貯金
         </button>
-        <button @click="currentTab = 'books'" class="px-3.5 py-1.5 rounded-md text-sm font-bold transition"
+        <button @click="switchTab('books')" class="px-3 py-1.5 rounded-md text-sm font-bold transition"
                 :class="currentTab === 'books' ? 'bg-amber-200/70 text-slate-800 shadow-sm' : 'text-slate-600 hover:bg-emerald-50'">
           <i class="fa-solid fa-book-bookmark mr-1 text-emerald-500"></i>読書ノート
         </button>
@@ -233,13 +238,122 @@
         </div>
       </section>
 
-      <!-- ================= 画面2: 使用計画 ================= -->
+      <!-- ================= 画面2: 1か月の振り返り (グラフ・分析) ================= -->
+      <section v-if="currentTab === 'report'" class="space-y-4">
+        <!-- 月選択バー -->
+        <div class="bg-white/80 backdrop-blur-sm p-3 rounded-2xl shadow-sm flex justify-between items-center border border-emerald-100/60">
+          <button @click="changeMonth(-1)" class="w-9 h-9 rounded-xl bg-emerald-50/80 hover:bg-emerald-100/80 flex items-center justify-center text-emerald-600 font-bold transition">
+            <i class="fa-solid fa-chevron-left"></i>
+          </button>
+
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-chart-line text-emerald-500 text-lg"></i>
+            <span class="font-bold text-base md:text-lg text-slate-800">{{ currentYearMonthLabel }} の振り返り</span>
+          </div>
+
+          <button @click="changeMonth(1)" class="w-9 h-9 rounded-xl bg-emerald-50/80 hover:bg-emerald-100/80 flex items-center justify-center text-emerald-600 font-bold transition">
+            <i class="fa-solid fa-chevron-right"></i>
+          </button>
+        </div>
+
+        <!-- サマリーハイライトカード -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div class="bg-white/90 p-4 rounded-2xl shadow-sm border border-emerald-100/60">
+            <div class="text-[11px] font-bold text-slate-400">今月の総支出</div>
+            <div class="text-base md:text-lg font-extrabold text-rose-500 mt-1">¥{{ monthlyExpense.toLocaleString() }}</div>
+          </div>
+          <div class="bg-white/90 p-4 rounded-2xl shadow-sm border border-emerald-100/60">
+            <div class="text-[11px] font-bold text-slate-400">1日あたりの平均支出</div>
+            <div class="text-base md:text-lg font-extrabold text-slate-700 mt-1">¥{{ dailyAverageExpense.toLocaleString() }}</div>
+          </div>
+          <div class="bg-white/90 p-4 rounded-2xl shadow-sm border border-emerald-100/60">
+            <div class="text-[11px] font-bold text-slate-400">今月の総収入</div>
+            <div class="text-base md:text-lg font-extrabold text-emerald-600 mt-1">+¥{{ monthlyIncome.toLocaleString() }}</div>
+          </div>
+          <div class="bg-white/90 p-4 rounded-2xl shadow-sm border border-emerald-100/60">
+            <div class="text-[11px] font-bold text-slate-400">今月の収支残高</div>
+            <div class="text-base md:text-lg font-extrabold mt-1" :class="monthlyBalance >= 0 ? 'text-amber-500' : 'text-rose-500'">
+              ¥{{ monthlyBalance.toLocaleString() }}
+            </div>
+          </div>
+        </div>
+
+        <!-- 振り返りワンポイントアドバイス -->
+        <div class="bg-gradient-to-r from-amber-50/80 via-emerald-50/60 to-teal-50/80 p-4 rounded-2xl border border-amber-100 shadow-sm flex items-start gap-3">
+          <span class="text-2xl">💡</span>
+          <div class="text-xs space-y-1">
+            <div class="font-bold text-slate-800">今月の支出ワンポイントコメント</div>
+            <div v-if="monthlyExpense === 0" class="text-slate-500">まだ今月の支出データが登録されていません。家計簿を入力してみましょう！</div>
+            <div v-else-if="topCategory" class="text-slate-600 leading-relaxed">
+              今月一番使ったカテゴリは <strong class="text-amber-700 font-bold">「{{ topCategory.category }}」で ¥{{ topCategory.amount.toLocaleString() }} (全体の{{ topCategory.ratio }}%)</strong> でした。
+              <span v-if="topCategory.ratio > 40">少し割合が高めなので、来月は無理のない範囲で見直してみるのもおすすめです！</span>
+              <span v-else>バランス良く支出をコントロールできています✨</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- グラフセクション (2コラム) -->
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+
+          <!-- ドーナツグラフ: カテゴリ別内訳割合 -->
+          <div class="md:col-span-5 bg-white/90 rounded-2xl shadow-sm p-4 border border-emerald-100/60 flex flex-col justify-between">
+            <div>
+              <h3 class="font-bold text-sm text-slate-800 mb-3 flex items-center gap-2">
+                <i class="fa-solid fa-chart-pie text-emerald-500"></i> カテゴリ別 支出割合
+              </h3>
+              <div v-if="categoryBreakdown.length === 0" class="py-12 text-center text-xs text-slate-400">
+                今月の支出データはありません
+              </div>
+              <div v-else class="relative max-w-[240px] mx-auto my-2">
+                <canvas id="categoryDoughnutChart"></canvas>
+              </div>
+            </div>
+
+            <!-- 内訳リスト & 構成比バー -->
+            <div v-if="categoryBreakdown.length > 0" class="mt-4 space-y-2 border-t border-slate-100 pt-3 max-h-[220px] overflow-y-auto">
+              <div v-for="item in categoryBreakdown" :key="item.category" class="text-xs space-y-1">
+                <div class="flex justify-between items-center font-bold">
+                  <span class="flex items-center gap-1.5 text-slate-700">
+                    <span>{{ getCategoryIcon(item.category) }}</span> {{ item.category }}
+                  </span>
+                  <span class="text-slate-800">¥{{ item.amount.toLocaleString() }} <span class="text-[10px] text-slate-400 font-normal">({{ item.ratio }}%)</span></span>
+                </div>
+                <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                  <div class="h-1.5 rounded-full bg-emerald-400" :style="{ width: item.ratio + '%' }"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 棒グラフ: 日別支出推移 -->
+          <div class="md:col-span-7 bg-white/90 rounded-2xl shadow-sm p-4 border border-emerald-100/60 flex flex-col justify-between">
+            <div>
+              <h3 class="font-bold text-sm text-slate-800 mb-3 flex items-center gap-2">
+                <i class="fa-solid fa-chart-column text-amber-500"></i> 日別 支出推移 (1日〜末日)
+              </h3>
+              <div v-if="monthlyExpense === 0" class="py-16 text-center text-xs text-slate-400">
+                今月の支出データはありません
+              </div>
+              <div v-else class="relative w-full h-[280px]">
+                <canvas id="dailyBarChart"></canvas>
+              </div>
+            </div>
+
+            <div class="text-[10px] text-slate-400 text-right pt-2">
+              ※ 高いバーの日は大きな買い物やまとめ買いがあった日です
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ================= 画面3: 使用計画 ================= -->
       <section v-if="currentTab === 'plan'" class="space-y-4">
         <div class="bg-white/90 rounded-2xl shadow-sm p-4 md:p-6 border border-emerald-100/60 space-y-4">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h2 class="font-bold text-slate-800 text-base md:text-lg mb-1 flex items-center gap-2">
-                <i class="fa-solid fa-chart-pie text-emerald-500"></i> 今月の使用計画 & 支出カテゴリ設定
+                <i class="fa-solid fa-sliders text-emerald-500"></i> 今月の使用計画 & 支出カテゴリ設定
               </h2>
               <p class="text-xs text-slate-400">支出カテゴリごとの予算設定、カテゴリの追加・削除・名前変更ができます</p>
             </div>
@@ -319,7 +433,7 @@
         </div>
       </section>
 
-      <!-- ================= 画面3: 貯金管理 ================= -->
+      <!-- ================= 画面4: 貯金管理 ================= -->
       <section v-if="currentTab === 'savings'" class="space-y-4">
         <div class="bg-white/90 rounded-2xl shadow-sm p-4 md:p-6 border border-emerald-100/60 space-y-4">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -408,7 +522,7 @@
         </div>
       </section>
 
-      <!-- ================= 画面4: 読書ノート ================= -->
+      <!-- ================= 画面5: 読書ノート ================= -->
       <section v-if="currentTab === 'books'" class="space-y-4">
 
         <!-- ヘッダー & 新規本追加エリア -->
@@ -701,32 +815,36 @@
 
     <!-- 下部ナビバー -->
     <nav class="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-emerald-100 flex justify-around p-2 z-20 shadow-lg md:hidden">
-      <button @click="currentTab = 'calendar'" class="flex-1 flex flex-col items-center py-1 text-xs font-bold"
+      <button @click="switchTab('calendar')" class="flex-1 flex flex-col items-center py-1 text-xs font-bold"
               :class="currentTab === 'calendar' ? 'text-emerald-600' : 'text-slate-400'">
         <i class="fa-solid fa-receipt text-base mb-1" :class="currentTab === 'calendar' ? 'text-amber-400' : ''"></i>
         家計簿
       </button>
-      <button @click="currentTab = 'plan'" class="flex-1 flex flex-col items-center py-1 text-xs font-bold"
-              :class="currentTab === 'plan' ? 'text-emerald-600' : 'text-slate-400'">
-        <i class="fa-solid fa-chart-pie text-base mb-1" :class="currentTab === 'plan' ? 'text-amber-400' : ''"></i>
-        使用計画
+      <button @click="switchTab('report')" class="flex-1 flex flex-col items-center py-1 text-xs font-bold"
+              :class="currentTab === 'report' ? 'text-emerald-600' : 'text-slate-400'">
+        <i class="fa-solid fa-chart-pie text-base mb-1" :class="currentTab === 'report' ? 'text-amber-400' : ''"></i>
+        振り返り
       </button>
-      <button @click="currentTab = 'savings'" class="flex-1 flex flex-col items-center py-1 text-xs font-bold"
+      <button @click="switchTab('plan')" class="flex-1 flex flex-col items-center py-1 text-xs font-bold"
+              :class="currentTab === 'plan' ? 'text-emerald-600' : 'text-slate-400'">
+        <i class="fa-solid fa-sliders text-base mb-1" :class="currentTab === 'plan' ? 'text-amber-400' : ''"></i>
+        計画
+      </button>
+      <button @click="switchTab('savings')" class="flex-1 flex flex-col items-center py-1 text-xs font-bold"
               :class="currentTab === 'savings' ? 'text-emerald-600' : 'text-slate-400'">
         <i class="fa-solid fa-piggy-bank text-base mb-1" :class="currentTab === 'savings' ? 'text-amber-400' : ''"></i>
         貯金
       </button>
-      <button @click="currentTab = 'books'" class="flex-1 flex flex-col items-center py-1 text-xs font-bold"
+      <button @click="switchTab('books')" class="flex-1 flex flex-col items-center py-1 text-xs font-bold"
               :class="currentTab === 'books' ? 'text-emerald-600' : 'text-slate-400'">
         <i class="fa-solid fa-book-bookmark text-base mb-1" :class="currentTab === 'books' ? 'text-amber-400' : ''"></i>
-        読書ノート
+        読書
       </button>
     </nav>
 
   </div>
 
   <script>
-    // ヘルパー関数（安全に定義）
     function loadBudgetPlans() {
       const defaultPlans = [
         { category: '食費', target: 40000 },
@@ -791,6 +909,9 @@
     // ★【重要】ここにGASのWebアプリURLを設定してください (/exec で終わるURL)
     const GAS_URL = 'https://script.google.com/macros/s/AKfycbxu0IZnDw3Y3E5FXRn02b2xFFa7x9BTRCij1_JpsCAbRYBivhk5pV7wIqRxJKCqQxw9/exec';
 
+    let categoryChartInstance = null;
+    let dailyChartInstance = null;
+
     window.addEventListener('DOMContentLoaded', () => {
       if (typeof Vue === 'undefined') {
         alert('Vue.jsの読み込みに失敗しました。ページを再読み込みしてください。');
@@ -828,20 +949,11 @@
             newGoal: { title: '', current: 0, target: 100000 },
             savingsGoals: loadSavingsGoals(),
 
-            // 読書ノート用
             showAddBookForm: false,
             searchingCover: false,
             bookFilter: 'all',
             editingBookModal: null,
-            newBook: {
-              title: '',
-              author: '',
-              price: '',
-              status: 'want',
-              coverUrl: '',
-              rating: 5,
-              review: ''
-            },
+            newBook: { title: '', author: '', price: '', status: 'want', coverUrl: '', rating: 5, review: '' },
             books: loadBooks(),
 
             form: {
@@ -856,15 +968,9 @@
         computed: {
           currentCategories() {
             if (this.form.type === 'income') {
-              return this.incomeCategories.map(cat => ({
-                name: cat,
-                label: `${this.getCategoryIcon(cat)} ${cat}`
-              }));
+              return this.incomeCategories.map(cat => ({ name: cat, label: `${this.getCategoryIcon(cat)} ${cat}` }));
             }
-            return this.budgetPlans.map(plan => ({
-              name: plan.category,
-              label: `${this.getCategoryIcon(plan.category)} ${plan.category}`
-            }));
+            return this.budgetPlans.map(plan => ({ name: plan.category, label: `${this.getCategoryIcon(plan.category)} ${plan.category}` }));
           },
           currentYearMonthLabel() {
             const [y, m] = this.selectedYearMonth.split('-');
@@ -875,9 +981,7 @@
           },
           filteredTransactions() {
             let list = this.monthlyTransactions;
-            if (this.selectedDateFilter) {
-              list = list.filter(t => t.date === this.selectedDateFilter);
-            }
+            if (this.selectedDateFilter) list = list.filter(t => t.date === this.selectedDateFilter);
             return list;
           },
           monthlyIncome() {
@@ -888,6 +992,28 @@
           },
           monthlyBalance() {
             return this.monthlyIncome - this.monthlyExpense;
+          },
+          dailyAverageExpense() {
+            if (!this.selectedYearMonth) return 0;
+            const [year, month] = this.selectedYearMonth.split('-').map(Number);
+            const daysInMonth = new Date(year, month, 0).getDate();
+            return Math.round(this.monthlyExpense / daysInMonth);
+          },
+          categoryBreakdown() {
+            const map = {};
+            this.monthlyTransactions.filter(t => t.type === 'expense').forEach(t => {
+              const cat = t.category || 'その他';
+              map[cat] = (map[cat] || 0) + Number(t.amount);
+            });
+            const total = this.monthlyExpense || 1;
+            return Object.keys(map).map(cat => ({
+              category: cat,
+              amount: map[cat],
+              ratio: Math.round((map[cat] / total) * 100)
+            })).sort((a, b) => b.amount - a.amount);
+          },
+          topCategory() {
+            return this.categoryBreakdown.length > 0 ? this.categoryBreakdown[0] : null;
           },
           calendarDays() {
             if (!this.selectedYearMonth) return [];
@@ -916,7 +1042,6 @@
             return days;
           },
 
-          // 読書ノート分類
           wantBooks() { return this.books.filter(b => b.status === 'want'); },
           tsundokuBooks() { return this.books.filter(b => b.status === 'tsundoku'); },
           readBooks() { return this.books.filter(b => b.status === 'read'); },
@@ -939,12 +1064,107 @@
                 this.form.category = validExpenseCats[0] || '食費';
               }
             }
+          },
+          selectedYearMonth() {
+            if (this.currentTab === 'report') {
+              this.$nextTick(() => this.renderCharts());
+            }
           }
         },
         mounted() {
           this.fetchTransactions();
         },
         methods: {
+          switchTab(tab) {
+            this.currentTab = tab;
+            if (tab === 'report') {
+              this.$nextTick(() => this.renderCharts());
+            }
+          },
+          renderCharts() {
+            if (typeof Chart === 'undefined') return;
+
+            // 1. カテゴリ別ドーナツグラフ
+            const categoryCanvas = document.getElementById('categoryDoughnutChart');
+            if (categoryCanvas) {
+              if (categoryChartInstance) categoryChartInstance.destroy();
+
+              const labels = this.categoryBreakdown.map(c => c.category);
+              const dataValues = this.categoryBreakdown.map(c => c.amount);
+              const colors = ['#f59e0b', '#10b981', '#3b82f6', '#ec4899', '#8b5cf6', '#06b6d4', '#84cc16', '#64748b'];
+
+              categoryChartInstance = new Chart(categoryCanvas, {
+                type: 'doughnut',
+                data: {
+                  labels,
+                  datasets: [{
+                    data: dataValues,
+                    backgroundColor: colors.slice(0, labels.length),
+                    borderWidth: 2,
+                    borderColor: '#ffffff'
+                  }]
+                },
+                options: {
+                  responsive: true,
+                  maintainAspectRatio: true,
+                  plugins: {
+                    legend: { display: false }
+                  }
+                }
+              });
+            }
+
+            // 2. 日別支出推移 棒グラフ
+            const dailyCanvas = document.getElementById('dailyBarChart');
+            if (dailyCanvas) {
+              if (dailyChartInstance) dailyChartInstance.destroy();
+
+              const [year, month] = this.selectedYearMonth.split('-').map(Number);
+              const daysInMonth = new Date(year, month, 0).getDate();
+              const dayLabels = [];
+              const dayValues = [];
+
+              for (let d = 1; d <= daysInMonth; d++) {
+                dayLabels.push(`${d}日`);
+                const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                const exp = this.transactions
+                  .filter(t => t.date === dateStr && t.type === 'expense')
+                  .reduce((sum, t) => sum + Number(t.amount), 0);
+                dayValues.push(exp);
+              }
+
+              dailyChartInstance = new Chart(dailyCanvas, {
+                type: 'bar',
+                data: {
+                  labels: dayLabels,
+                  datasets: [{
+                    label: '支出 (円)',
+                    data: dayValues,
+                    backgroundColor: '#f87171',
+                    borderRadius: 4
+                  }]
+                },
+                options: {
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  scales: {
+                    x: {
+                      grid: { display: false },
+                      ticks: { font: { size: 9 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 15 }
+                    },
+                    y: {
+                      beginAtZero: true,
+                      ticks: { font: { size: 10 } }
+                    }
+                  },
+                  plugins: {
+                    legend: { display: false }
+                  }
+                }
+              });
+            }
+          },
+
           getCardStyleClass(status) {
             if (status === 'want') return 'bg-gradient-to-b from-orange-200/90 via-orange-100/40 to-white border-orange-500 hover:border-orange-600 shadow-orange-200/60';
             if (status === 'tsundoku') return 'bg-gradient-to-b from-blue-200/90 via-blue-100/40 to-white border-blue-500 hover:border-blue-600 shadow-blue-200/60';
@@ -963,14 +1183,9 @@
             if (status === 'read') return '🎉 読了';
             return '本';
           },
-          saveBooks() {
-            localStorage.setItem('my_kakeibo_books', JSON.stringify(this.books));
-          },
+          saveBooks() { localStorage.setItem('my_kakeibo_books', JSON.stringify(this.books)); },
           async searchCover() {
-            if (!this.newBook.title.trim()) {
-              alert('タイトルを入力してください');
-              return;
-            }
+            if (!this.newBook.title.trim()) return alert('タイトルを入力してください');
             this.searchingCover = true;
             try {
               const query = encodeURIComponent(this.newBook.title.trim());
@@ -983,42 +1198,22 @@
                   const info = item.volumeInfo;
                   let imgUrl = '';
                   if (info.imageLinks && (info.imageLinks.thumbnail || info.imageLinks.smallThumbnail)) {
-                    imgUrl = (info.imageLinks.thumbnail || info.imageLinks.smallThumbnail)
-                      .replace(/^http:/, 'https:')
-                      .replace('&edge=curl', '');
+                    imgUrl = (info.imageLinks.thumbnail || info.imageLinks.smallThumbnail).replace(/^http:/, 'https:').replace('&edge=curl', '');
                   } else if (info.industryIdentifiers) {
                     const isbnObj = info.industryIdentifiers.find(i => i.type === 'ISBN_13' || i.type === 'ISBN_10');
-                    if (isbnObj) {
-                      imgUrl = `https://cover.openbd.com/${isbnObj.identifier}.jpg`;
-                    }
+                    if (isbnObj) imgUrl = `https://cover.openbd.com/${isbnObj.identifier}.jpg`;
                   }
 
                   if (imgUrl) {
                     this.newBook.coverUrl = imgUrl;
-                    if (!this.newBook.author && info.authors) {
-                      this.newBook.author = info.authors.join(', ');
-                    }
+                    if (!this.newBook.author && info.authors) this.newBook.author = info.authors.join(', ');
                     found = true;
                     break;
                   }
                 }
-
-                if (!found && data.items[0].volumeInfo) {
-                  const info = data.items[0].volumeInfo;
-                  if (!this.newBook.author && info.authors) {
-                    this.newBook.author = info.authors.join(', ');
-                  }
-                  alert('本は見つかりましたが、表紙画像は登録されていませんでした。そのまま登録可能です。');
-                }
-              } else {
-                alert('該当する本が見つかりませんでした');
               }
-            } catch(e) {
-              console.error(e);
-              alert('表紙の検索中にエラーが発生しました');
-            } finally {
-              this.searchingCover = false;
-            }
+              if (!found) alert('該当する本の表紙が見つかりませんでした');
+            } catch(e) { alert('検索エラー'); } finally { this.searchingCover = false; }
           },
           async searchModalCover() {
             if (!this.editingBookModal || !this.editingBookModal.title) return;
@@ -1036,13 +1231,10 @@
                     const isbnObj = info.industryIdentifiers.find(i => i.type === 'ISBN_13' || i.type === 'ISBN_10');
                     if (isbnObj) imgUrl = `https://cover.openbd.com/${isbnObj.identifier}.jpg`;
                   }
-
                   if (imgUrl) {
                     this.editingBookModal.coverUrl = imgUrl;
                     this.editingBookModal.imageError = false;
-                    if (!this.editingBookModal.author && info.authors) {
-                      this.editingBookModal.author = info.authors.join(', ');
-                    }
+                    if (!this.editingBookModal.author && info.authors) this.editingBookModal.author = info.authors.join(', ');
                     break;
                   }
                 }
@@ -1050,10 +1242,7 @@
             } catch(e) { console.error(e); }
           },
           addBook() {
-            if (!this.newBook.title.trim()) {
-              alert('本のタイトルを入力してください');
-              return;
-            }
+            if (!this.newBook.title.trim()) return alert('本のタイトルを入力してください');
             this.books.unshift({
               id: Date.now(),
               title: this.newBook.title.trim(),
@@ -1074,9 +1263,7 @@
             if (newStatus === 'read' && !book.rating) book.rating = 5;
             this.saveBooks();
           },
-          openReviewModal(book) {
-            this.editingBookModal = { ...book };
-          },
+          openReviewModal(book) { this.editingBookModal = { ...book }; },
           saveBookModal() {
             if (!this.editingBookModal) return;
             const idx = this.books.findIndex(b => b.id === this.editingBookModal.id);
@@ -1182,6 +1369,7 @@
               const res = await fetch(GAS_URL);
               const data = await res.json();
               this.transactions = data.map(item => ({ ...item, date: this.cleanDate(item.date || item.data) })).sort((a, b) => new Date(b.date) - new Date(a.date));
+              if (this.currentTab === 'report') this.$nextTick(() => this.renderCharts());
             } catch (e) { console.error(e); } finally { this.fetching = false; }
           },
           async saveTransaction() {
@@ -1219,6 +1407,7 @@
             const d = new Date(year, month - 1 + offset, 1);
             this.selectedYearMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
             this.selectedDateFilter = null;
+            if (this.currentTab === 'report') this.$nextTick(() => this.renderCharts());
           },
           selectDate(dateStr) {
             this.selectedDateFilter = this.selectedDateFilter === dateStr ? null : dateStr;
