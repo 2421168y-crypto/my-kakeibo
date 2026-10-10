@@ -403,7 +403,7 @@
         </div>
       </section>
 
-      <!-- ================= 画面4: 読書ノート (本棚風コンパクトグリッド表示) ================= -->
+      <!-- ================= 画面4: 読書ノート (色濃くメリハリ強化版) ================= -->
       <section v-if="currentTab === 'books'" class="space-y-4">
 
         <!-- ヘッダー & 新規本追加エリア -->
@@ -498,75 +498,71 @@
           </div>
         </div>
 
-        <!-- サマリーバー -->
+        <!-- 濃いめサマリーバー -->
         <div class="grid grid-cols-3 gap-2 text-center text-xs font-bold">
-          <div class="bg-amber-100/60 p-2.5 rounded-2xl border border-amber-200/80 text-amber-900">
+          <div class="bg-amber-500 text-white p-2.5 rounded-2xl shadow-xs border border-amber-600">
             <div>📖 読みたい本</div>
             <div class="text-sm md:text-base font-extrabold mt-0.5">{{ wantBooks.length }} 冊</div>
           </div>
-          <div class="bg-sky-100/60 p-2.5 rounded-2xl border border-sky-200/80 text-sky-900">
+          <div class="bg-sky-500 text-white p-2.5 rounded-2xl shadow-xs border border-sky-600">
             <div>📚 積ん読</div>
             <div class="text-sm md:text-base font-extrabold mt-0.5">{{ tsundokuBooks.length }} 冊</div>
           </div>
-          <div class="bg-emerald-100/60 p-2.5 rounded-2xl border border-emerald-200/80 text-emerald-900">
+          <div class="bg-emerald-500 text-white p-2.5 rounded-2xl shadow-xs border border-emerald-600">
             <div>🎉 読んだ本</div>
             <div class="text-sm md:text-base font-extrabold mt-0.5">{{ readBooks.length }} 冊</div>
           </div>
         </div>
 
-        <!-- 絞り込みフィルタータブ -->
-        <div class="flex gap-1 bg-white/80 p-1 rounded-2xl border border-emerald-100/60 backdrop-blur-sm w-full text-xs font-bold overflow-x-auto shadow-2xs">
+        <!-- メリハリを強化した絞り込みフィルタータブ -->
+        <div class="flex gap-1.5 bg-white/80 p-1.5 rounded-2xl border border-slate-200 backdrop-blur-sm w-full text-xs font-bold overflow-x-auto shadow-xs">
           <button @click="bookFilter = 'all'" class="flex-1 py-1.5 rounded-xl transition whitespace-nowrap"
-                  :class="bookFilter === 'all' ? 'bg-amber-200 text-slate-800 shadow-xs' : 'text-slate-500 hover:bg-amber-50'">
+                  :class="bookFilter === 'all' ? 'bg-slate-800 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'">
             すべて ({{ books.length }})
           </button>
           <button @click="bookFilter = 'want'" class="flex-1 py-1.5 rounded-xl transition whitespace-nowrap"
-                  :class="bookFilter === 'want' ? 'bg-amber-300/80 text-amber-950 shadow-xs' : 'text-slate-500 hover:bg-amber-50'">
+                  :class="bookFilter === 'want' ? 'bg-amber-500 text-white shadow-xs' : 'text-amber-800 hover:bg-amber-50'">
             📖 読みたい ({{ wantBooks.length }})
           </button>
           <button @click="bookFilter = 'tsundoku'" class="flex-1 py-1.5 rounded-xl transition whitespace-nowrap"
-                  :class="bookFilter === 'tsundoku' ? 'bg-sky-300/80 text-sky-950 shadow-xs' : 'text-slate-500 hover:bg-sky-50'">
+                  :class="bookFilter === 'tsundoku' ? 'bg-sky-500 text-white shadow-xs' : 'text-sky-800 hover:bg-sky-50'">
             📚 積ん読 ({{ tsundokuBooks.length }})
           </button>
           <button @click="bookFilter = 'read'" class="flex-1 py-1.5 rounded-xl transition whitespace-nowrap"
-                  :class="bookFilter === 'read' ? 'bg-emerald-300/80 text-emerald-950 shadow-xs' : 'text-slate-500 hover:bg-emerald-50'">
+                  :class="bookFilter === 'read' ? 'bg-emerald-500 text-white shadow-xs' : 'text-emerald-800 hover:bg-emerald-50'">
             🎉 読了 ({{ readBooks.length }})
           </button>
         </div>
 
-        <!-- 【改修】コンパクトグリッド表示 (スマホ:2〜3列, PC:4〜5列) -->
+        <!-- くっきりカラー＆上部ステータス帯付きのカード表示 -->
         <div v-if="filteredBooks.length === 0" class="bg-white/80 rounded-2xl p-8 text-center text-slate-400 text-sm border border-emerald-100">
           本が登録されていません。「新しい本を追加」から登録してみましょう！
         </div>
 
-        <div v-else class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+        <div v-else class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5">
           <div v-for="book in filteredBooks" :key="book.id"
-               class="rounded-2xl border shadow-sm transition overflow-hidden flex flex-col justify-between relative group"
+               class="rounded-2xl border-2 shadow-sm transition overflow-hidden flex flex-col justify-between relative group"
                :class="getCardStyleClass(book.status)">
             
-            <!-- 上部: ステータスバッジ ＆ 削除/編集ボタン -->
-            <div class="p-2 space-y-1.5">
-              
-              <!-- カラーバッジ -->
-              <div class="flex justify-between items-center gap-1">
-                <span class="text-[9px] font-extrabold px-2 py-0.5 rounded-full text-white shadow-2xs truncate"
-                      :class="getBadgeStyleClass(book.status)">
-                  {{ getStatusLabelShort(book.status) }}
-                </span>
-
-                <!-- 編集・削除アクション -->
-                <div class="flex items-center gap-1">
-                  <button @click="openReviewModal(book)" class="text-slate-400 hover:text-amber-600 text-[10px] p-0.5" title="編集">
-                    <i class="fa-solid fa-pen"></i>
-                  </button>
-                  <button @click="deleteBook(book.id)" class="text-slate-300 hover:text-rose-400 text-[10px] p-0.5" title="削除">
-                    <i class="fa-solid fa-trash"></i>
-                  </button>
-                </div>
+            <!-- カード上部のヘッダーリボン帯 -->
+            <div class="text-[10px] font-extrabold px-2 py-0.5 text-white flex justify-between items-center"
+                 :class="getHeaderBandStyleClass(book.status)">
+              <span class="truncate">{{ getStatusLabelShort(book.status) }}</span>
+              <div class="flex items-center gap-1.5 shrink-0">
+                <button @click="openReviewModal(book)" class="text-white/80 hover:text-white text-[10px]" title="編集">
+                  <i class="fa-solid fa-pen"></i>
+                </button>
+                <button @click="deleteBook(book.id)" class="text-white/80 hover:text-white text-[10px]" title="削除">
+                  <i class="fa-solid fa-trash"></i>
+                </button>
               </div>
+            </div>
 
-              <!-- 本の表紙画像 (アスペクト比維持でコンパクト表示) -->
-              <div class="w-full aspect-[3/4] rounded-xl overflow-hidden bg-slate-200/60 border border-slate-200/80 shadow-xs flex items-center justify-center relative">
+            <!-- カードコンテンツ領域 -->
+            <div class="p-2 space-y-1.5">
+
+              <!-- 本の表紙画像 -->
+              <div class="w-full aspect-[3/4] rounded-xl overflow-hidden bg-slate-200/60 border border-slate-300/80 shadow-xs flex items-center justify-center relative">
                 
                 <img v-if="book.coverUrl && !book.imageError" 
                      :src="book.coverUrl" 
@@ -575,15 +571,15 @@
                      @error="book.imageError = true"
                      class="w-full h-full object-cover">
                 
-                <!-- 画像が無い場合のブックカバー風フォールバックデザイン -->
+                <!-- フォールバック用デザイン -->
                 <div v-else class="w-full h-full bg-gradient-to-br from-amber-100 via-amber-50 to-emerald-100 p-2 flex flex-col justify-between items-center text-center">
                   <span class="text-xl mt-1">📖</span>
                   <div class="font-bold text-[10px] text-slate-700 line-clamp-3 leading-tight">{{ book.title }}</div>
                   <span class="text-[8px] text-slate-400 truncate max-w-full">{{ book.author || 'YUI Library' }}</span>
                 </div>
 
-                <!-- 金額タグ (表紙の上に重ねてコンパクト化) -->
-                <div v-if="book.price > 0" class="absolute bottom-1 right-1 bg-slate-900/70 backdrop-blur-xs text-white text-[9px] font-bold px-1.5 py-0.2 rounded-md">
+                <!-- 金額タグ -->
+                <div v-if="book.price > 0" class="absolute bottom-1 right-1 bg-slate-900/80 backdrop-blur-xs text-white text-[9px] font-bold px-1.5 py-0.2 rounded-md">
                   ¥{{ Number(book.price).toLocaleString() }}
                 </div>
               </div>
@@ -599,26 +595,26 @@
                 </div>
               </div>
 
-              <!-- 読書メモ内包表示 (1行だけチラ見せ) -->
-              <p v-if="book.review" class="text-[9px] text-slate-500 bg-white/70 p-1 rounded-md border border-slate-100 line-clamp-1 italic">
+              <!-- 読書メモ (チラ見せ) -->
+              <p v-if="book.review" class="text-[9px] text-slate-600 bg-white/90 p-1 rounded-md border border-slate-200 line-clamp-1 italic shadow-2xs">
                 "{{ book.review }}"
               </p>
             </div>
 
-            <!-- カード最下部: ワンタップで状態を進めるボタン -->
+            <!-- アクションボタン -->
             <div class="p-1.5 pt-0">
               <button v-if="book.status === 'want'" @click="updateStatus(book, 'tsundoku')"
-                      class="w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-1 rounded-xl text-[10px] transition shadow-2xs flex items-center justify-center gap-1">
+                      class="w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-1 rounded-xl text-[10px] transition shadow-xs flex items-center justify-center gap-1">
                 <span>📚</span> 積ん読にする
               </button>
 
               <button v-else-if="book.status === 'tsundoku'" @click="openReviewModal(book)"
-                      class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-1 rounded-xl text-[10px] transition shadow-2xs flex items-center justify-center gap-1">
+                      class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-1 rounded-xl text-[10px] transition shadow-xs flex items-center justify-center gap-1">
                 <span>🎉</span> 読了にする！
               </button>
 
               <button v-else @click="openReviewModal(book)"
-                      class="w-full bg-white hover:bg-slate-50 text-emerald-700 font-bold py-1 rounded-xl text-[10px] border border-emerald-200 transition shadow-2xs flex items-center justify-center gap-1">
+                      class="w-full bg-white hover:bg-emerald-50 text-emerald-800 font-bold py-1 rounded-xl text-[10px] border border-emerald-300 transition shadow-xs flex items-center justify-center gap-1">
                 <span>✨</span> ノート確認
               </button>
             </div>
@@ -876,14 +872,14 @@
         this.fetchTransactions();
       },
       methods: {
-        // --- 読書ノートカード色＆バッジ定義 ---
+        // --- 読書ノートカード色＆ヘッダーリボン定義 ---
         getCardStyleClass(status) {
-          if (status === 'want') return 'bg-amber-50/70 border-amber-200 hover:border-amber-400';
-          if (status === 'tsundoku') return 'bg-sky-50/70 border-sky-200 hover:border-sky-400';
-          if (status === 'read') return 'bg-emerald-50/70 border-emerald-200 hover:border-emerald-400';
+          if (status === 'want') return 'bg-gradient-to-b from-amber-100/90 via-amber-50/40 to-white border-amber-400 hover:border-amber-500 shadow-amber-100/50';
+          if (status === 'tsundoku') return 'bg-gradient-to-b from-sky-100/90 via-sky-50/40 to-white border-sky-400 hover:border-sky-500 shadow-sky-100/50';
+          if (status === 'read') return 'bg-gradient-to-b from-emerald-100/90 via-emerald-50/40 to-white border-emerald-400 hover:border-emerald-500 shadow-emerald-100/50';
           return 'bg-white border-slate-200';
         },
-        getBadgeStyleClass(status) {
+        getHeaderBandStyleClass(status) {
           if (status === 'want') return 'bg-amber-500';
           if (status === 'tsundoku') return 'bg-sky-500';
           if (status === 'read') return 'bg-emerald-500';
@@ -917,9 +913,7 @@
                   imageError: false
                 }));
               }
-            } catch (e) {
-              console.error(e);
-            }
+            } catch (e) { console.error(e); }
           }
           return defaultBooks;
         },
@@ -927,7 +921,6 @@
           localStorage.setItem('my_kakeibo_books', JSON.stringify(this.books));
         },
 
-        // 【二重検索ロジック】Google Books + OpenBD 自動フォールバック
         async searchCover() {
           if (!this.newBook.title.trim()) {
             alert('タイトルを入力してください');
@@ -949,7 +942,6 @@
                     .replace(/^http:/, 'https:')
                     .replace('&edge=curl', '');
                 } else if (info.industryIdentifiers) {
-                  // ISBNからOpenBDで画像を取得試行
                   const isbnObj = info.industryIdentifiers.find(i => i.type === 'ISBN_13' || i.type === 'ISBN_10');
                   if (isbnObj) {
                     imgUrl = `https://cover.openbd.com/${isbnObj.identifier}.jpg`;
@@ -1010,9 +1002,7 @@
                 }
               }
             }
-          } catch(e) {
-            console.error(e);
-          }
+          } catch(e) { console.error(e); }
         },
         addBook() {
           if (!this.newBook.title.trim()) {
