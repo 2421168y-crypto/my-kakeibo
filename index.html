@@ -1403,14 +1403,22 @@
             this.savingsGoals[index].title = newTitle;
             this.saveSavingsGoals(); this.editingSavingsIndex = null;
           },
+          // ★ 日付クレンジング関数の強化
           cleanDate(rawDate) {
             if (!rawDate) return '';
             let str = String(rawDate).trim();
-            if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
             if (str.includes('T')) str = str.split('T')[0];
             str = str.replace(/\//g, '-');
+            
+            const match = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+            if (match) {
+              const y = match[1];
+              const m = String(match[2]).padStart(2, '0');
+              const d = String(match[3]).padStart(2, '0');
+              return `${y}-${m}-${d}`;
+            }
+
             let d = new Date(str);
-            if (isNaN(d.getTime())) d = new Date(`${str} ${new Date().getFullYear()}`);
             if (!isNaN(d.getTime())) {
               const y = d.getFullYear();
               const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -1437,6 +1445,14 @@
           async saveTransaction() {
             this.loading = true;
             try {
+              // ★ 登録・編集した日付の年月に自動で画面を移動させる
+              if (this.form.date) {
+                const parts = this.form.date.split('-');
+                if (parts.length >= 2) {
+                  this.selectedYearMonth = `${parts[0]}-${parts[1].padStart(2, '0')}`;
+                }
+              }
+
               if (GAS_URL && !GAS_URL.includes('YOUR_GAS_WEB_APP_URL')) {
                 await fetch(GAS_URL, {
                   method: 'POST',
