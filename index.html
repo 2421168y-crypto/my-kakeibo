@@ -198,7 +198,12 @@
                 <span v-if="selectedDateFilter">{{ formatDateShort(selectedDateFilter) }} の履歴</span>
                 <span v-else>{{ currentYearMonthLabel }} の履歴</span>
               </h2>
-              <span class="text-xs text-slate-400 font-bold">全 {{ filteredTransactions.length }} 件</span>
+              <div class="flex items-center gap-2 text-xs font-bold">
+                <span class="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+                  転記済: {{ filteredTransactions.filter(t => copiedIds.includes(t.id)).length }}件
+                </span>
+                <span class="text-slate-400">全 {{ filteredTransactions.length }} 件</span>
+              </div>
             </div>
 
             <div v-if="fetching" class="text-center py-12 text-slate-400 text-sm">データ読み込み中...</div>
@@ -209,31 +214,32 @@
             <ul v-else class="divide-y divide-emerald-50 max-h-[520px] overflow-y-auto pr-1">
               <li v-for="item in filteredTransactions" :key="item.id" 
                   class="py-2.5 flex justify-between items-center hover:bg-amber-50/30 px-2 rounded-xl transition group"
-                  :class="{'opacity-50 bg-slate-50/60': copiedIds.includes(item.id)}">
+                  :class="{'opacity-60 bg-slate-50/80': copiedIds.includes(item.id)}">
                 
-                <div class="flex items-center gap-2.5">
-                  <!-- ノート転記チェックボックス -->
-                  <label class="flex items-center cursor-pointer shrink-0" title="ノートに転記済み">
+                <div class="flex items-center gap-2">
+                  <!-- ノート転記ボタン風チェックボックス -->
+                  <label class="flex items-center gap-1 px-2 py-1 rounded-lg border text-[10px] font-bold cursor-pointer transition shrink-0 select-none"
+                         :class="copiedIds.includes(item.id) ? 'bg-emerald-100 border-emerald-300 text-emerald-800' : 'bg-slate-100 border-slate-200 text-slate-500 hover:bg-amber-100 hover:border-amber-300'">
                     <input type="checkbox" 
                            :checked="copiedIds.includes(item.id)" 
                            @change="toggleCopied(item.id)" 
-                           class="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-400 cursor-pointer">
+                           class="w-3.5 h-3.5 text-emerald-600 rounded border-slate-300 focus:ring-emerald-400 cursor-pointer">
+                    <span>{{ copiedIds.includes(item.id) ? '✓ 転記済' : '📝 転記' }}</span>
                   </label>
 
-                  <div class="w-9 h-9 rounded-2xl flex items-center justify-center text-base shrink-0 shadow-sm transition"
+                  <div class="w-8 h-8 rounded-2xl flex items-center justify-center text-sm shrink-0 shadow-sm transition"
                        :class="getCategoryColorClass(item.category, item.type)">
                     <span>{{ getCategoryIcon(item.category) }}</span>
                   </div>
                   <div>
                     <div class="font-bold text-sm text-slate-800 flex items-center gap-1.5">
                       <span :class="{'line-through text-slate-400': copiedIds.includes(item.id)}">{{ item.memo || item.category }}</span>
-                      <span v-if="copiedIds.includes(item.id)" class="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.2 rounded">転記済</span>
                     </div>
                     <div class="text-[11px] text-slate-400">{{ formatDateShort(item.date) }} · {{ item.category }}</div>
                   </div>
                 </div>
 
-                <div class="flex items-center gap-3">
+                <div class="flex items-center gap-2 md:gap-3">
                   <div class="font-bold text-sm md:text-base text-right" 
                        :class="[item.type === 'expense' ? 'text-rose-400' : 'text-emerald-500', {'line-through opacity-70': copiedIds.includes(item.id)}]">
                     {{ item.type === 'expense' ? '-' : '+' }}¥{{ Number(item.amount).toLocaleString() }}
@@ -632,7 +638,7 @@
           </div>
         </div>
 
-        <!-- 濃いめサマリーバー -->
+        <!-- サマリーバー -->
         <div class="grid grid-cols-3 gap-2 text-center text-xs font-bold">
           <div class="bg-orange-600 text-white p-2.5 rounded-2xl shadow-sm border border-orange-700">
             <div class="text-[11px] opacity-90">📖 読みたい本</div>
@@ -729,7 +735,7 @@
                 </div>
               </div>
 
-              <!-- 読書メモ (チラ見せ) -->
+              <!-- 読書メモ -->
               <p v-if="book.review" class="text-[9px] text-slate-700 font-medium bg-white/95 p-1 rounded-md border border-slate-300 line-clamp-1 italic shadow-2xs">
                 "{{ book.review }}"
               </p>
@@ -921,6 +927,21 @@
       return defaultBooks;
     }
 
+    function loadLocalTransactions() {
+      const defaultTx = [
+        { id: '101', date: new Date().toISOString().slice(0, 10), type: 'expense', amount: 1200, category: '食費', memo: 'ランチ' },
+        { id: '102', date: new Date().toISOString().slice(0, 10), type: 'expense', amount: 800, category: '日用品費', memo: '洗剤' }
+      ];
+      try {
+        const saved = localStorage.getItem('my_kakeibo_transactions');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) return parsed;
+        }
+      } catch (e) { console.error(e); }
+      return defaultTx;
+    }
+
     function loadCopiedIds() {
       try {
         const saved = localStorage.getItem('my_kakeibo_copied_ids');
@@ -929,7 +950,7 @@
       return [];
     }
 
-    // ★【重要】ここにGASのWebアプリURLを設定してください (/exec で終わるURL)
+    // ★【任意】GASと連携する場合は、発行したWebアプリURL (/exec) を以下に入力します
     const GAS_URL = 'https://script.google.com/macros/s/AKfycbxu0IZnDw3Y3E5FXRn02b2xFFa7x9BTRCij1_JpsCAbRYBivhk5pV7wIqRxJKCqQxw9/exec';
 
     let categoryChartInstance = null;
@@ -950,7 +971,7 @@
 
           return {
             currentTab: 'calendar',
-            transactions: [],
+            transactions: loadLocalTransactions(),
             loading: false,
             fetching: false,
             selectedYearMonth: `${yyyy}-${mm}`,
@@ -1099,6 +1120,9 @@
           this.fetchTransactions();
         },
         methods: {
+          saveTransactionsToLocal() {
+            localStorage.setItem('my_kakeibo_transactions', JSON.stringify(this.transactions));
+          },
           toggleCopied(id) {
             const idx = this.copiedIds.indexOf(id);
             if (idx === -1) {
@@ -1396,25 +1420,45 @@
             return str;
           },
           async fetchTransactions() {
-            if (!GAS_URL || GAS_URL.includes('YOUR_GAS_WEB_APP_URL')) return;
+            if (!GAS_URL || GAS_URL.includes('YOUR_GAS_WEB_APP_URL')) {
+              // GAS設定がない場合はローカルストレージから読み込み
+              this.transactions = loadLocalTransactions();
+              if (this.currentTab === 'report') this.$nextTick(() => this.renderCharts());
+              return;
+            }
             this.fetching = true;
             try {
               const res = await fetch(GAS_URL);
               const data = await res.json();
               this.transactions = data.map(item => ({ ...item, date: this.cleanDate(item.date || item.data) })).sort((a, b) => new Date(b.date) - new Date(a.date));
+              this.saveTransactionsToLocal();
               if (this.currentTab === 'report') this.$nextTick(() => this.renderCharts());
             } catch (e) { console.error(e); } finally { this.fetching = false; }
           },
           async saveTransaction() {
             this.loading = true;
             try {
-              await fetch(GAS_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain' },
-                body: JSON.stringify({ action: this.isEditing ? 'update' : 'add', id: this.editingId, ...this.form })
-              });
-              await this.fetchTransactions();
+              if (GAS_URL && !GAS_URL.includes('YOUR_GAS_WEB_APP_URL')) {
+                await fetch(GAS_URL, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'text/plain' },
+                  body: JSON.stringify({ action: this.isEditing ? 'update' : 'add', id: this.editingId, ...this.form })
+                });
+                await this.fetchTransactions();
+              } else {
+                // GAS未設定時のローカル処理
+                if (this.isEditing) {
+                  const idx = this.transactions.findIndex(t => t.id === this.editingId);
+                  if (idx !== -1) {
+                    this.transactions[idx] = { id: this.editingId, ...this.form };
+                  }
+                } else {
+                  this.transactions.unshift({ id: String(Date.now()), ...this.form });
+                }
+                this.saveTransactionsToLocal();
+              }
               this.resetForm();
+              if (this.currentTab === 'report') this.$nextTick(() => this.renderCharts());
             } catch (e) { alert('保存に失敗しました'); } finally { this.loading = false; }
           },
           editTransaction(item) {
@@ -1427,8 +1471,14 @@
             if (!confirm('この明細を削除しますか？')) return;
             this.fetching = true;
             try {
-              await fetch(GAS_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ action: 'delete', id }) });
-              await this.fetchTransactions();
+              if (GAS_URL && !GAS_URL.includes('YOUR_GAS_WEB_APP_URL')) {
+                await fetch(GAS_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ action: 'delete', id }) });
+                await this.fetchTransactions();
+              } else {
+                this.transactions = this.transactions.filter(t => t.id !== id);
+                this.saveTransactionsToLocal();
+              }
+              if (this.currentTab === 'report') this.$nextTick(() => this.renderCharts());
             } catch (e) { alert('削除に失敗しました'); } finally { this.fetching = false; }
           },
           resetForm() {
