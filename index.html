@@ -207,20 +207,35 @@
             </div>
             
             <ul v-else class="divide-y divide-emerald-50 max-h-[520px] overflow-y-auto pr-1">
-              <li v-for="item in filteredTransactions" :key="item.id" class="py-2.5 flex justify-between items-center hover:bg-amber-50/30 px-2 rounded-xl transition group">
+              <li v-for="item in filteredTransactions" :key="item.id" 
+                  class="py-2.5 flex justify-between items-center hover:bg-amber-50/30 px-2 rounded-xl transition group"
+                  :class="{'opacity-50 bg-slate-50/60': copiedIds.includes(item.id)}">
+                
                 <div class="flex items-center gap-2.5">
+                  <!-- ノート転記チェックボックス -->
+                  <label class="flex items-center cursor-pointer shrink-0" title="ノートに転記済み">
+                    <input type="checkbox" 
+                           :checked="copiedIds.includes(item.id)" 
+                           @change="toggleCopied(item.id)" 
+                           class="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-400 cursor-pointer">
+                  </label>
+
                   <div class="w-9 h-9 rounded-2xl flex items-center justify-center text-base shrink-0 shadow-sm transition"
                        :class="getCategoryColorClass(item.category, item.type)">
                     <span>{{ getCategoryIcon(item.category) }}</span>
                   </div>
                   <div>
-                    <div class="font-bold text-sm text-slate-800">{{ item.memo || item.category }}</div>
+                    <div class="font-bold text-sm text-slate-800 flex items-center gap-1.5">
+                      <span :class="{'line-through text-slate-400': copiedIds.includes(item.id)}">{{ item.memo || item.category }}</span>
+                      <span v-if="copiedIds.includes(item.id)" class="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.2 rounded">転記済</span>
+                    </div>
                     <div class="text-[11px] text-slate-400">{{ formatDateShort(item.date) }} · {{ item.category }}</div>
                   </div>
                 </div>
 
                 <div class="flex items-center gap-3">
-                  <div class="font-bold text-sm md:text-base text-right" :class="item.type === 'expense' ? 'text-rose-400' : 'text-emerald-500'">
+                  <div class="font-bold text-sm md:text-base text-right" 
+                       :class="[item.type === 'expense' ? 'text-rose-400' : 'text-emerald-500', {'line-through opacity-70': copiedIds.includes(item.id)}]">
                     {{ item.type === 'expense' ? '-' : '+' }}¥{{ Number(item.amount).toLocaleString() }}
                   </div>
                   <div class="flex gap-1">
@@ -906,6 +921,14 @@
       return defaultBooks;
     }
 
+    function loadCopiedIds() {
+      try {
+        const saved = localStorage.getItem('my_kakeibo_copied_ids');
+        if (saved) return JSON.parse(saved);
+      } catch(e) { console.error(e); }
+      return [];
+    }
+
     // ★【重要】ここにGASのWebアプリURLを設定してください (/exec で終わるURL)
     const GAS_URL = 'https://script.google.com/macros/s/AKfycbxu0IZnDw3Y3E5FXRn02b2xFFa7x9BTRCij1_JpsCAbRYBivhk5pV7wIqRxJKCqQxw9/exec';
 
@@ -934,6 +957,7 @@
             selectedDateFilter: null,
             isEditing: false,
             editingId: null,
+            copiedIds: loadCopiedIds(),
             
             budgetPlans: loadBudgetPlans(),
             incomeCategories: ['給料', '臨時収入', 'おこづかい', 'その他'],
@@ -1075,6 +1099,15 @@
           this.fetchTransactions();
         },
         methods: {
+          toggleCopied(id) {
+            const idx = this.copiedIds.indexOf(id);
+            if (idx === -1) {
+              this.copiedIds.push(id);
+            } else {
+              this.copiedIds.splice(idx, 1);
+            }
+            localStorage.setItem('my_kakeibo_copied_ids', JSON.stringify(this.copiedIds));
+          },
           switchTab(tab) {
             this.currentTab = tab;
             if (tab === 'report') {
