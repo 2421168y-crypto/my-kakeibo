@@ -1,1054 +1,1256 @@
+
 <!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>YUI 家計簿</title>
+
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.3.4/vue.global.prod.min.js"></script>
-  <!-- グラフ表示用 Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
   <style>
-    [v-cloak] { opacity: 0; }
-    #app { transition: opacity 0.2s ease-in; }
+    [v-cloak] { display: none; }
+    body { font-family: "Segoe UI", "Hiragino Kaku Gothic ProN", sans-serif; }
+    .panel { background: rgba(255,255,255,.94); border: 1px solid #d1fae5; border-radius: 18px; padding: 18px; box-shadow: 0 3px 12px #64748b0c; }
+    .field { width: 100%; padding: 9px 11px; border: 1px solid #cbd5e1; border-radius: 11px; background: #fff; font-size: 14px; }
+    .field:focus { outline: 2px solid #a7f3d0; }
+    .label { display: block; font-size: 12px; color: #64748b; margin-bottom: 5px; }
+    .btn { background: #fde68a; padding: 9px 15px; border-radius: 11px; font-weight: 700; font-size: 13px; }
+    .btn:hover { background: #fcd34d; }
+    .btn:disabled { opacity: .5; cursor: wait; }
+    .subbtn { background: #d1fae5; padding: 8px 12px; border-radius: 10px; font-size: 12px; font-weight: 700; }
+    .navbtn { padding: 10px; border-radius: 12px; font-size: 13px; font-weight: 700; color: #64748b; }
+    .navbtn.active { background: #fef3c7; color: #065f46; }
   </style>
 </head>
-<body class="bg-gradient-to-br from-amber-50/30 via-emerald-50/20 to-yellow-50/30 min-h-screen pb-20 md:pb-8 text-slate-700">
-  <div id="app" v-cloak class="max-w-md md:max-w-5xl lg:max-w-6xl mx-auto px-0 md:px-6">
 
-    <!-- ヘッダー -->
-    <header class="bg-gradient-to-r from-emerald-50 via-teal-50 to-amber-50 text-slate-700 p-4 sticky top-0 z-10 shadow-sm md:rounded-b-2xl flex justify-between items-center border-b border-emerald-100">
-      <h1 class="font-bold text-lg flex items-center gap-2 tracking-wide text-slate-800">
-        <i class="fa-solid fa-wallet text-amber-400 text-xl"></i> YUI 家計簿
+<body class="min-h-screen bg-gradient-to-br from-amber-50 via-emerald-50 to-yellow-50 text-slate-700 pb-24 md:pb-8">
+<div id="app" v-cloak class="max-w-6xl mx-auto">
+
+  <!-- ヘッダー -->
+  <header class="sticky top-0 z-20 bg-white/95 border-b border-emerald-100 p-4 shadow-sm">
+    <div class="max-w-6xl mx-auto flex justify-between items-center gap-2">
+      <h1 class="font-extrabold text-lg text-emerald-800">
+        🌷 YUI 家計簿
       </h1>
 
-      <!-- PC用ナビゲーション -->
-      <nav class="hidden md:flex gap-1 bg-white/70 p-1 rounded-xl border border-emerald-100 backdrop-blur-sm">
-        <button @click="switchTab('calendar')" class="px-3 py-1.5 rounded-lg text-sm font-bold transition"
-                :class="currentTab === 'calendar' ? 'bg-amber-200/70 text-slate-800 shadow-sm' : 'text-slate-600 hover:bg-emerald-50'">
-          <i class="fa-solid fa-receipt mr-1 text-emerald-500"></i>家計簿
-        </button>
-        <button @click="switchTab('report')" class="px-3 py-1.5 rounded-lg text-sm font-bold transition"
-                :class="currentTab === 'report' ? 'bg-amber-200/70 text-slate-800 shadow-sm' : 'text-slate-600 hover:bg-emerald-50'">
-          <i class="fa-solid fa-chart-pie mr-1 text-emerald-500"></i>振り返り
-        </button>
-        <button @click="switchTab('plan')" class="px-3 py-1.5 rounded-md text-sm font-bold transition"
-                :class="currentTab === 'plan' ? 'bg-amber-200/70 text-slate-800 shadow-sm' : 'text-slate-600 hover:bg-emerald-50'">
-          <i class="fa-solid fa-sliders mr-1 text-emerald-500"></i>使用計画
-        </button>
-        <button @click="switchTab('savings')" class="px-3 py-1.5 rounded-md text-sm font-bold transition"
-                :class="currentTab === 'savings' ? 'bg-amber-200/70 text-slate-800 shadow-sm' : 'text-slate-600 hover:bg-emerald-50'">
-          <i class="fa-solid fa-piggy-bank mr-1 text-emerald-500"></i>貯金
-        </button>
-        <button @click="switchTab('books')" class="px-3 py-1.5 rounded-md text-sm font-bold transition"
-                :class="currentTab === 'books' ? 'bg-amber-200/70 text-slate-800 shadow-sm' : 'text-slate-600 hover:bg-emerald-50'">
-          <i class="fa-solid fa-book-bookmark mr-1 text-emerald-500"></i>読書ノート
+      <nav class="hidden md:flex gap-1">
+        <button v-for="tab in tabs" :key="tab.id"
+          @click="switchTab(tab.id)"
+          class="navbtn"
+          :class="{active:currentTab===tab.id}">
+          {{ tab.icon }} {{ tab.name }}
         </button>
       </nav>
 
-      <button @click="fetchAllData" class="text-xs bg-white/90 hover:bg-white text-slate-700 font-bold px-3.5 py-1.5 rounded-full border border-emerald-100 shadow-sm flex items-center gap-1.5 transition">
-        <i class="fa-solid fa-rotate-right text-emerald-500" :class="{'fa-spin': fetching}"></i>
-        <span class="hidden md:inline">データ</span>更新
+      <button @click="fetchAllData" :disabled="fetching"
+        class="subbtn">
+        🔄 更新
       </button>
-    </header>
+    </div>
+  </header>
 
-    <main class="p-3 md:py-6">
+  <main class="p-3 md:p-6 space-y-5">
 
-      <!-- ================= 画面1: 家計簿メイン ================= -->
-      <section v-if="currentTab === 'calendar'" class="space-y-4">
-        <!-- 月選択バー -->
-        <div class="bg-white/80 backdrop-blur-sm p-3 rounded-2xl shadow-sm flex justify-between items-center border border-emerald-100/60">
-          <button @click="changeMonth(-1)" class="w-9 h-9 rounded-xl bg-emerald-50/80 hover:bg-emerald-100/80 flex items-center justify-center text-emerald-600 font-bold transition">
-            <i class="fa-solid fa-chevron-left"></i>
-          </button>
+    <div v-if="errorMessage"
+      class="bg-rose-50 border border-rose-200 text-rose-700 text-sm rounded-xl p-3">
+      {{ errorMessage }}
+    </div>
 
-          <div class="flex items-center gap-2">
-            <i class="fa-regular fa-calendar-check text-emerald-500 text-lg"></i>
-            <span class="font-bold text-base md:text-lg text-slate-800">{{ currentYearMonthLabel }}</span>
-            <button v-if="selectedDateFilter" @click="selectedDateFilter = null" class="text-xs bg-amber-100/80 text-amber-900 border border-amber-200 px-2.5 py-0.5 rounded-full ml-2 font-bold">
-              日付解除 ({{ formatDateShort(selectedDateFilter) }}) ✕
-            </button>
-          </div>
+    <!-- 月選択 -->
+    <div v-if="['calendar','report','plan'].includes(currentTab)"
+      class="panel flex justify-between items-center">
+      <button @click="changeMonth(-1)" class="subbtn">❮</button>
+      <div class="text-center">
+        <div class="font-bold">{{ currentYearMonthLabel }}</div>
+        <button v-if="selectedDateFilter && currentTab==='calendar'"
+          @click="selectedDateFilter=null"
+          class="text-xs text-amber-700">
+          {{ selectedDateFilter }} の絞り込み解除 ✕
+        </button>
+      </div>
+      <button @click="changeMonth(1)" class="subbtn">❯</button>
+    </div>
 
-          <button @click="changeMonth(1)" class="w-9 h-9 rounded-xl bg-emerald-50/80 hover:bg-emerald-100/80 flex items-center justify-center text-emerald-600 font-bold transition">
-            <i class="fa-solid fa-chevron-right"></i>
-          </button>
+    <!-- ========== 家計簿 ========== -->
+    <section v-if="currentTab==='calendar'" class="space-y-5">
+
+      <div class="grid grid-cols-3 gap-2">
+        <div class="panel text-center !p-3">
+          <p class="text-xs text-emerald-600">月収入</p>
+          <p class="font-bold text-emerald-600 break-all">
+            ¥{{ yen(monthlyIncome) }}
+          </p>
         </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
-          <div class="md:col-span-6 space-y-4">
-            <div class="grid grid-cols-3 gap-2 bg-white/90 p-4 rounded-2xl shadow-sm text-center border border-emerald-100/60">
-              <div>
-                <div class="text-xs font-bold text-emerald-600">月収入</div>
-                <div class="font-bold text-emerald-500 text-sm md:text-base mt-1">+¥{{ monthlyIncome.toLocaleString() }}</div>
-              </div>
-              <div class="border-x border-emerald-100/60">
-                <div class="text-xs font-bold text-slate-400">月支出</div>
-                <div class="font-bold text-rose-400 text-sm md:text-base mt-1">-¥{{ monthlyExpense.toLocaleString() }}</div>
-              </div>
-              <div>
-                <div class="text-xs font-bold text-amber-600">収支差額</div>
-                <div class="font-bold text-sm md:text-base mt-1" :class="monthlyBalance >= 0 ? 'text-amber-500' : 'text-rose-400'">
-                  ¥{{ monthlyBalance.toLocaleString() }}
-                </div>
-              </div>
-            </div>
-
-            <!-- カレンダー -->
-            <div class="bg-white/90 rounded-2xl shadow-sm p-4 border border-emerald-100/60">
-              <div class="text-xs font-bold text-slate-600 mb-2.5 flex justify-between items-center">
-                <span><i class="fa-solid fa-calendar-days text-amber-400 mr-1.5"></i> 日別支出・収入カレンダー</span>
-                <span class="text-[10px] text-slate-400">日付選択で絞り込み</span>
-              </div>
-              <div class="grid grid-cols-7 text-center text-[11px] font-bold py-1.5 border-b border-emerald-100/60 bg-emerald-50/40 rounded-t-xl text-slate-600">
-                <span class="text-rose-400">日</span>
-                <span>月</span>
-                <span>火</span>
-                <span>水</span>
-                <span>木</span>
-                <span>金</span>
-                <span class="text-sky-400">土</span>
-              </div>
-              <div class="grid grid-cols-7 gap-1 pt-1.5">
-                <div v-for="(cell, idx) in calendarDays" :key="idx"
-                     @click="cell.day && selectDate(cell.dateStr)"
-                     class="min-h-[52px] p-1 rounded-xl border text-left transition flex flex-col justify-between"
-                     :class="[
-                       !cell.day ? 'border-transparent bg-transparent cursor-default' : 'cursor-pointer hover:border-amber-300 hover:bg-amber-50/40',
-                       cell.dateStr === selectedDateFilter ? 'bg-amber-100/60 border-amber-300 ring-2 ring-amber-100' : 'border-slate-100 bg-slate-50/30'
-                     ]">
-                  <template v-if="cell.day">
-                    <span class="text-[11px] font-bold"
-                          :class="cell.isToday ? 'bg-emerald-400 text-white w-4 h-4 rounded-full flex items-center justify-center shadow-sm' : 'text-slate-600'">
-                      {{ cell.day }}
-                    </span>
-                    <div class="text-[9px] leading-tight space-y-0.5">
-                      <div v-if="cell.income > 0" class="text-emerald-500 font-bold truncate">+{{ formatK(cell.income) }}</div>
-                      <div v-if="cell.expense > 0" class="text-rose-400 font-bold truncate">-{{ formatK(cell.expense) }}</div>
-                    </div>
-                  </template>
-                </div>
-              </div>
-            </div>
-
-            <!-- フォーム -->
-            <div class="bg-white/90 rounded-2xl shadow-sm overflow-hidden border border-amber-100" id="form-section">
-              <div class="p-3.5 font-bold text-slate-700 flex justify-between items-center bg-gradient-to-r from-amber-50/60 to-emerald-50/40 border-b border-amber-100/60">
-                <span class="text-sm flex items-center gap-1.5">
-                  <i class="fa-solid" :class="isEditing ? 'fa-pen-to-square text-amber-500' : 'fa-plus-circle text-emerald-500'"></i>
-                  {{ isEditing ? 'データを編集する' : '収支を記録する' }}
-                </span>
-                <button v-if="isEditing" @click="cancelEdit" class="text-xs bg-slate-200 hover:bg-slate-300 text-slate-600 px-2 py-1 rounded-lg">
-                  キャンセル
-                </button>
-              </div>
-              <form @submit.prevent="saveTransaction" class="p-4 space-y-3">
-                <div class="flex gap-2">
-                  <label class="flex-1 py-1.5 text-center rounded-xl border font-bold text-xs cursor-pointer transition"
-                         :class="form.type === 'expense' ? 'bg-rose-50 border-rose-200 text-rose-500' : 'border-slate-200 text-slate-400 hover:bg-slate-50'">
-                    <input type="radio" value="expense" v-model="form.type" class="hidden"> 支出
-                  </label>
-                  <label class="flex-1 py-1.5 text-center rounded-xl border font-bold text-xs cursor-pointer transition"
-                         :class="form.type === 'income' ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'border-slate-200 text-slate-400 hover:bg-slate-50'">
-                    <input type="radio" value="income" v-model="form.type" class="hidden"> 収入
-                  </label>
-                </div>
-
-                <div class="grid grid-cols-2 gap-2">
-                  <div>
-                    <label class="block text-[11px] font-medium text-slate-500 mb-1">日付</label>
-                    <input type="date" v-model="form.date" required class="w-full border border-slate-200 rounded-xl p-2 text-xs bg-slate-50/50 focus:bg-white focus:border-amber-300">
-                  </div>
-                  <div>
-                    <label class="block text-[11px] font-medium text-slate-500 mb-1">金額 (円)</label>
-                    <input type="number" v-model.number="form.amount" placeholder="1000" required class="w-full border border-slate-200 rounded-xl p-2 text-xs bg-slate-50/50 focus:bg-white focus:border-amber-300">
-                  </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-2">
-                  <div>
-                    <label class="block text-[11px] font-medium text-slate-500 mb-1">カテゴリ</label>
-                    <select v-model="form.category" class="w-full border border-slate-200 rounded-xl p-2 text-xs bg-slate-50/50 focus:bg-white focus:border-amber-300 font-bold">
-                      <option v-for="cat in currentCategories" :key="cat.name" :value="cat.name">
-                        {{ cat.label }}
-                      </option>
-                    </select>
-                  </div>
-                  <div>
-                    <label class="block text-[11px] font-medium text-slate-500 mb-1">メモ</label>
-                    <input type="text" v-model="form.memo" placeholder="買い物メモなど" class="w-full border border-slate-200 rounded-xl p-2 text-xs bg-slate-50/50 focus:bg-white focus:border-amber-300">
-                  </div>
-                </div>
-
-                <button type="submit" :disabled="loading"
-                        class="w-full py-2.5 rounded-xl font-bold text-sm transition shadow-sm disabled:opacity-50 text-slate-800 bg-amber-200/80 hover:bg-amber-300/80 border border-amber-300/50">
-                  <i class="fa-solid fa-heart mr-1 text-amber-400"></i>
-                  {{ loading ? '処理中...' : (isEditing ? '変更を保存する' : '記録を追加する') }}
-                </button>
-              </form>
-            </div>
-          </div>
-
-          <!-- 明細リスト -->
-          <div class="md:col-span-6 bg-white/90 rounded-2xl shadow-sm p-4 border border-emerald-100/60">
-            <div class="flex justify-between items-center pb-3 border-b border-emerald-100/60 mb-3">
-              <h2 class="font-bold text-slate-700 text-sm md:text-base">
-                <i class="fa-regular fa-list-alt text-emerald-500 mr-1.5"></i>
-                <span v-if="selectedDateFilter">{{ formatDateShort(selectedDateFilter) }} の履歴</span>
-                <span v-else>{{ currentYearMonthLabel }} の履歴</span>
-              </h2>
-              <div class="flex items-center gap-2 text-xs font-bold">
-                <span class="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
-                  転記済: {{ filteredTransactions.filter(t => t.copied).length }}件
-                </span>
-                <span class="text-slate-400">全 {{ filteredTransactions.length }} 件</span>
-              </div>
-            </div>
-
-            <div v-if="fetching" class="text-center py-12 text-slate-400 text-sm">データ読み込み中...</div>
-            <div v-else-if="filteredTransactions.length === 0" class="text-center py-12 text-slate-400 text-sm">
-              {{ selectedDateFilter ? 'この日のデータはありません' : '今月のデータはありません' }}
-            </div>
-            
-            <ul v-else class="divide-y divide-emerald-50 pr-1">
-              <li v-for="item in filteredTransactions" :key="item.id" 
-                  class="py-2.5 flex justify-between items-center hover:bg-amber-50/30 px-2 rounded-xl transition group">
-                
-                <div class="flex items-center gap-2">
-                  <label class="flex items-center gap-1 px-2 py-1 rounded-lg border text-[10px] font-bold cursor-pointer transition shrink-0 select-none"
-                         :class="item.copied ? 'bg-emerald-100 border-emerald-300 text-emerald-800' : 'bg-slate-100 border-slate-200 text-slate-500 hover:bg-amber-100 hover:border-amber-300'">
-                    <input type="checkbox" 
-                           :checked="item.copied" 
-                           @change="toggleCopied(item)" 
-                           class="w-3.5 h-3.5 text-emerald-600 rounded border-slate-300 focus:ring-emerald-400 cursor-pointer">
-                    <span>{{ item.copied ? '✓ 転記済' : '📝 転記' }}</span>
-                  </label>
-
-                  <div class="w-8 h-8 rounded-2xl flex items-center justify-center text-sm shrink-0 shadow-sm transition"
-                       :class="getCategoryColorClass(item.category, item.type)">
-                    <span>{{ getCategoryIcon(item.category) }}</span>
-                  </div>
-                  <div>
-                    <div class="font-bold text-sm text-slate-800 flex items-center gap-1.5">
-                      <span>{{ item.memo || item.category }}</span>
-                    </div>
-                    <div class="text-[11px] text-slate-400">{{ formatDateShort(item.date) }} · {{ item.category }}</div>
-                  </div>
-                </div>
-
-                <div class="flex items-center gap-2 md:gap-3">
-                  <div class="font-bold text-sm md:text-base text-right" 
-                       :class="item.type === 'expense' ? 'text-rose-400' : 'text-emerald-500'">
-                    {{ item.type === 'expense' ? '-' : '+' }}¥{{ Number(item.amount).toLocaleString() }}
-                  </div>
-                  <div class="flex gap-1">
-                    <button @click="editTransaction(item)" class="w-7 h-7 rounded-lg text-slate-400 hover:text-amber-500 hover:bg-amber-100/50 flex items-center justify-center transition">
-                      <i class="fa-solid fa-pen text-xs"></i>
-                    </button>
-                    <button @click="deleteTransaction(item.id)" class="w-7 h-7 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-50 flex items-center justify-center transition">
-                      <i class="fa-solid fa-trash text-xs"></i>
-                    </button>
-                  </div>
-                </div>
-              </li>
-            </ul>
-          </div>
+        <div class="panel text-center !p-3">
+          <p class="text-xs text-rose-500">月支出</p>
+          <p class="font-bold text-rose-500 break-all">
+            ¥{{ yen(monthlyExpense) }}
+          </p>
         </div>
-      </section>
-
-      <!-- ================= 画面2: 1か月の振り返り ================= -->
-      <section v-if="currentTab === 'report'" class="space-y-4">
-        <div class="bg-white/80 backdrop-blur-sm p-3 rounded-2xl shadow-sm flex justify-between items-center border border-emerald-100/60">
-          <button @click="changeMonth(-1)" class="w-9 h-9 rounded-xl bg-emerald-50/80 hover:bg-emerald-100/80 flex items-center justify-center text-emerald-600 font-bold transition">
-            <i class="fa-solid fa-chevron-left"></i>
-          </button>
-
-          <div class="flex items-center gap-2">
-            <i class="fa-solid fa-chart-line text-emerald-500 text-lg"></i>
-            <span class="font-bold text-base md:text-lg text-slate-800">{{ currentYearMonthLabel }} の振り返り</span>
-          </div>
-
-          <button @click="changeMonth(1)" class="w-9 h-9 rounded-xl bg-emerald-50/80 hover:bg-emerald-100/80 flex items-center justify-center text-emerald-600 font-bold transition">
-            <i class="fa-solid fa-chevron-right"></i>
-          </button>
+        <div class="panel text-center !p-3">
+          <p class="text-xs text-amber-600">収支差額</p>
+          <p class="font-bold break-all"
+            :class="monthlyBalance>=0?'text-emerald-700':'text-rose-500'">
+            ¥{{ yen(monthlyBalance) }}
+          </p>
         </div>
+      </div>
 
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div class="bg-white/90 p-4 rounded-2xl shadow-sm border border-emerald-100/60">
-            <div class="text-[11px] font-bold text-slate-400">今月の総支出</div>
-            <div class="text-base md:text-lg font-extrabold text-rose-500 mt-1">¥{{ monthlyExpense.toLocaleString() }}</div>
-          </div>
-          <div class="bg-white/90 p-4 rounded-2xl shadow-sm border border-emerald-100/60">
-            <div class="text-[11px] font-bold text-slate-400">1日あたりの平均支出</div>
-            <div class="text-base md:text-lg font-extrabold text-slate-700 mt-1">¥{{ dailyAverageExpense.toLocaleString() }}</div>
-          </div>
-          <div class="bg-white/90 p-4 rounded-2xl shadow-sm border border-emerald-100/60">
-            <div class="text-[11px] font-bold text-slate-400">今月の総収入</div>
-            <div class="text-base md:text-lg font-extrabold text-emerald-600 mt-1">+¥{{ monthlyIncome.toLocaleString() }}</div>
-          </div>
-          <div class="bg-white/90 p-4 rounded-2xl shadow-sm border border-emerald-100/60">
-            <div class="text-[11px] font-bold text-slate-400">今月の収支残高</div>
-            <div class="text-base md:text-lg font-extrabold mt-1" :class="monthlyBalance >= 0 ? 'text-amber-500' : 'text-rose-500'">
-              ¥{{ monthlyBalance.toLocaleString() }}
-            </div>
-          </div>
-        </div>
+      <div class="grid md:grid-cols-2 gap-5">
+        <div class="space-y-5">
 
-        <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
-          <div class="md:col-span-5 bg-white/90 rounded-2xl shadow-sm p-4 border border-emerald-100/60 flex flex-col justify-between">
-            <div>
-              <h3 class="font-bold text-sm text-slate-800 mb-3 flex items-center gap-2">
-                <i class="fa-solid fa-chart-pie text-emerald-500"></i> カテゴリ別 支出割合
-              </h3>
-              <div v-if="categoryBreakdown.length === 0" class="py-12 text-center text-xs text-slate-400">
-                今月の支出データはありません
-              </div>
-              <div v-else class="relative max-w-[240px] mx-auto my-2">
-                <canvas id="categoryDoughnutChart"></canvas>
-              </div>
+          <!-- カレンダー -->
+          <div class="panel">
+            <h2 class="font-bold mb-3">📅 収支カレンダー</h2>
+
+            <div class="grid grid-cols-7 text-center text-xs font-bold mb-2">
+              <span v-for="d in weekdays" :key="d">{{ d }}</span>
             </div>
 
-            <div v-if="categoryBreakdown.length > 0" class="mt-4 space-y-2 border-t border-slate-100 pt-3 max-h-[220px] overflow-y-auto">
-              <div v-for="item in categoryBreakdown" :key="item.category" class="text-xs space-y-1">
-                <div class="flex justify-between items-center font-bold">
-                  <span class="flex items-center gap-1.5 text-slate-700">
-                    <span>{{ getCategoryIcon(item.category) }}</span> {{ item.category }}
+            <div class="grid grid-cols-7 gap-1">
+              <button v-for="(d,i) in calendarDays" :key="i"
+                :disabled="!d.day"
+                @click="selectDate(d.dateStr)"
+                class="min-h-16 rounded-lg border text-left p-1"
+                :class="!d.day?'border-transparent':
+                selectedDateFilter===d.dateStr?'bg-amber-100 border-amber-400':
+                'bg-slate-50 border-slate-100'">
+                <template v-if="d.day">
+                  <span class="text-xs font-bold"
+                    :class="d.isToday?'text-emerald-600':''">
+                    {{ d.day }}
                   </span>
-                  <span class="text-slate-800">¥{{ item.amount.toLocaleString() }} <span class="text-[10px] text-slate-400 font-normal">({{ item.ratio }}%)</span></span>
-                </div>
-                <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                  <div class="h-1.5 rounded-full bg-emerald-400" :style="{ width: item.ratio + '%' }"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="md:col-span-7 bg-white/90 rounded-2xl shadow-sm p-4 border border-emerald-100/60 flex flex-col justify-between">
-            <div>
-              <h3 class="font-bold text-sm text-slate-800 mb-3 flex items-center gap-2">
-                <i class="fa-solid fa-chart-column text-amber-500"></i> 日別 支出推移 (1日〜末日)
-              </h3>
-              <div v-if="monthlyExpense === 0" class="py-16 text-center text-xs text-slate-400">
-                今月の支出データはありません
-              </div>
-              <div v-else class="relative w-full h-[280px]">
-                <canvas id="dailyBarChart"></canvas>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- ================= 画面3: 使用計画 ================= -->
-      <section v-if="currentTab === 'plan'" class="space-y-4">
-        <div class="bg-white/90 rounded-2xl shadow-sm p-4 md:p-6 border border-emerald-100/60 space-y-4">
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h2 class="font-bold text-slate-800 text-base md:text-lg mb-1 flex items-center gap-2">
-                <i class="fa-solid fa-sliders text-emerald-500"></i> 今月の使用計画 & 支出カテゴリ設定
-              </h2>
-              <p class="text-xs text-slate-400">スプレッドシートと完全同期しています</p>
-            </div>
-            <button @click="showAddCategoryForm = !showAddCategoryForm" 
-                    class="text-xs bg-emerald-100 hover:bg-emerald-200/70 text-slate-700 font-bold px-3 py-2 rounded-xl flex items-center justify-center gap-1.5 transition shrink-0 shadow-sm border border-emerald-200/50">
-              <i class="fa-solid" :class="showAddCategoryForm ? 'fa-minus' : 'fa-plus'"></i>
-              {{ showAddCategoryForm ? 'フォームを閉じる' : 'カテゴリを追加' }}
-            </button>
-          </div>
-
-          <div v-if="showAddCategoryForm" class="bg-gradient-to-r from-amber-50/60 to-emerald-50/60 p-4 rounded-2xl border border-amber-100 space-y-3">
-            <div class="font-bold text-xs text-slate-700">新しい支出カテゴリの追加</div>
-            <div class="grid grid-cols-1 sm:grid-cols-12 gap-2">
-              <div class="sm:col-span-6">
-                <label class="block text-[10px] font-bold text-slate-400 mb-1">カテゴリ名</label>
-                <input type="text" v-model="newCat.name" placeholder="例: 美容費" class="w-full border border-slate-200 rounded-xl p-2 text-xs bg-white">
-              </div>
-              <div class="sm:col-span-4">
-                <label class="block text-[10px] font-bold text-slate-400 mb-1">月間目標予算 (円)</label>
-                <input type="number" v-model.number="newCat.target" placeholder="10000" class="w-full border border-slate-200 rounded-xl p-2 text-xs bg-white">
-              </div>
-              <div class="sm:col-span-2 flex items-end">
-                <button @click="addCategory" class="w-full py-2 bg-amber-200/80 hover:bg-amber-300/80 text-slate-800 font-bold text-xs rounded-xl transition shadow-sm border border-amber-300/40">
-                  追加
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div v-for="(plan, index) in budgetPlans" :key="index" class="bg-white/90 p-4 border border-emerald-100/60 rounded-2xl shadow-sm space-y-3">
-            <div class="flex justify-between items-center">
-              <div class="flex items-center gap-2">
-                <div class="w-8 h-8 rounded-xl flex items-center justify-center text-base shrink-0 shadow-sm"
-                     :class="getCategoryColorClass(plan.category, 'expense')">
-                  <span>{{ getCategoryIcon(plan.category) }}</span>
-                </div>
-                <span class="font-bold text-sm text-slate-800">{{ plan.category }}</span>
-              </div>
-              <button @click="deleteCategory(index)" class="text-slate-300 hover:text-rose-400 text-xs p-1">
-                <i class="fa-solid fa-trash"></i>
+                  <p v-if="d.income" class="text-[9px] text-emerald-600 truncate">
+                    +{{ yen(d.income) }}
+                  </p>
+                  <p v-if="d.expense" class="text-[9px] text-rose-500 truncate">
+                    -{{ yen(d.expense) }}
+                  </p>
+                </template>
               </button>
             </div>
-
-            <div class="flex justify-between items-center text-xs">
-              <span class="text-slate-500">当月使用: <strong class="text-slate-700">¥{{ getCategorySpent(plan.category).toLocaleString() }}</strong></span>
-              <div class="flex items-center gap-1.5">
-                <span class="text-slate-400">予算: ¥</span>
-                <input type="number" v-model.number="plan.target" @change="syncBudgetPlansToGAS" class="w-24 border border-slate-200 rounded-lg px-1.5 py-1 text-right font-bold text-xs bg-amber-50/20 focus:bg-white focus:border-amber-300" step="1000" min="0">
-              </div>
-            </div>
-
-            <div class="space-y-1">
-              <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden border border-slate-100">
-                <div class="h-2.5 rounded-full transition-all duration-300"
-                     :class="plan.target > 0 && getCategorySpent(plan.category) > plan.target ? 'bg-rose-400' : 'bg-gradient-to-r from-emerald-300 to-amber-300'"
-                     :style="{ width: plan.target > 0 ? Math.min((getCategorySpent(plan.category) / plan.target) * 100, 100) + '%' : '0%' }">
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- ================= 画面4: 貯金管理 ================= -->
-      <section v-if="currentTab === 'savings'" class="space-y-4">
-        <div class="bg-white/90 rounded-2xl shadow-sm p-4 md:p-6 border border-emerald-100/60 space-y-4">
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h2 class="font-bold text-slate-800 text-base md:text-lg mb-1 flex items-center gap-2">
-                <i class="fa-solid fa-piggy-bank text-amber-400 text-xl"></i> 貯金目標・資産管理
-              </h2>
-              <p class="text-xs text-slate-400">スマホとPCで全データを共有しています</p>
-            </div>
-            <button @click="showAddSavingsForm = !showAddSavingsForm" 
-                    class="text-xs bg-emerald-100 hover:bg-emerald-200/70 text-slate-700 font-bold px-3 py-2 rounded-xl flex items-center justify-center gap-1.5 transition shrink-0 shadow-sm border border-emerald-200/50">
-              <i class="fa-solid" :class="showAddSavingsForm ? 'fa-minus' : 'fa-plus'"></i>
-              {{ showAddSavingsForm ? 'フォームを閉じる' : '目標を追加' }}
-            </button>
           </div>
 
-          <div v-if="showAddSavingsForm" class="bg-gradient-to-r from-amber-50/60 to-emerald-50/60 p-4 rounded-2xl border border-amber-100 space-y-3">
-            <div class="font-bold text-xs text-slate-700">新しい貯金目標の追加</div>
-            <div class="grid grid-cols-1 sm:grid-cols-12 gap-2">
-              <div class="sm:col-span-5">
-                <label class="block text-[10px] font-bold text-slate-400 mb-1">目標名</label>
-                <input type="text" v-model="newGoal.title" placeholder="例: 旅行資金" class="w-full border border-slate-200 rounded-xl p-2 text-xs bg-white">
-              </div>
-              <div class="sm:col-span-3">
-                <label class="block text-[10px] font-bold text-slate-400 mb-1">現在の貯金 (円)</label>
-                <input type="number" v-model.number="newGoal.current" placeholder="0" class="w-full border border-slate-200 rounded-xl p-2 text-xs bg-white">
-              </div>
-              <div class="sm:col-span-3">
-                <label class="block text-[10px] font-bold text-slate-400 mb-1">目標金額 (円)</label>
-                <input type="number" v-model.number="newGoal.target" placeholder="100000" class="w-full border border-slate-200 rounded-xl p-2 text-xs bg-white">
-              </div>
-              <div class="sm:col-span-1 flex items-end">
-                <button @click="addSavingsGoal" class="w-full py-2 bg-amber-200/80 hover:bg-amber-300/80 text-slate-800 font-bold text-xs rounded-xl transition shadow-sm border border-amber-300/40">
-                  追加
+          <!-- 収支入力 -->
+          <div class="panel" id="transaction-form">
+            <h2 class="font-bold mb-4">
+              {{ isEditing?'✏️ 収支を編集':'💰 収支を記録' }}
+            </h2>
+
+            <form @submit.prevent="saveTransaction" class="space-y-3">
+              <div class="grid grid-cols-2 gap-2">
+                <button type="button" class="p-2 rounded-xl border font-bold"
+                  :class="form.type==='expense'?'bg-rose-100 border-rose-300':'bg-white'"
+                  @click="form.type='expense';ensureFormCategory()">
+                  支出
+                </button>
+                <button type="button" class="p-2 rounded-xl border font-bold"
+                  :class="form.type==='income'?'bg-emerald-100 border-emerald-300':'bg-white'"
+                  @click="form.type='income';ensureFormCategory()">
+                  収入
                 </button>
               </div>
-            </div>
-          </div>
-        </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div v-for="(item, index) in savingsGoals" :key="index" class="border border-amber-100 p-4 rounded-2xl bg-white/90 shadow-sm space-y-3">
-            <div class="flex justify-between items-center">
-              <div class="flex items-center gap-2">
-                <span class="font-bold text-sm text-slate-800"><i class="fa-solid fa-seedling text-emerald-400 mr-1.5"></i>{{ item.title }}</span>
-              </div>
-              <button @click="deleteSavingsGoal(index)" class="text-slate-300 hover:text-rose-400 text-xs p-1">
-                <i class="fa-solid fa-trash"></i>
-              </button>
-            </div>
-
-            <div class="grid grid-cols-2 gap-2 pt-1 text-xs">
-              <div>
-                <label class="block text-[10px] text-slate-400 mb-0.5">現在の貯金額 (円)</label>
-                <input type="number" v-model.number="item.current" @change="syncSavingsGoalsToGAS" class="w-full border border-slate-200 rounded-lg px-2 py-1 font-bold text-emerald-600 bg-emerald-50/20 focus:bg-white focus:border-amber-300">
-              </div>
-              <div>
-                <label class="block text-[10px] text-slate-400 mb-0.5">目標金額 (円)</label>
-                <input type="number" v-model.number="item.target" @change="syncSavingsGoalsToGAS" class="w-full border border-slate-200 rounded-lg px-2 py-1 font-bold text-slate-700 bg-amber-50/20 focus:bg-white focus:border-amber-300">
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- ================= 画面5: 読書ノート ================= -->
-      <section v-if="currentTab === 'books'" class="space-y-4">
-        <div class="bg-white/90 rounded-2xl shadow-sm p-4 md:p-5 border border-emerald-100/60 space-y-3">
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h2 class="font-bold text-slate-800 text-base md:text-lg mb-0.5 flex items-center gap-2">
-                <span class="text-xl">📚</span> YUI 読書ノート
-              </h2>
-              <p class="text-xs text-slate-400">スプレッドシートと完全同期中</p>
-            </div>
-            
-            <button @click="showAddBookForm = !showAddBookForm" 
-                    class="text-xs bg-emerald-100 hover:bg-emerald-200/70 text-slate-700 font-bold px-3 py-2 rounded-xl flex items-center justify-center gap-1.5 transition shrink-0 shadow-sm border border-emerald-200/50">
-              <i class="fa-solid" :class="showAddBookForm ? 'fa-minus' : 'fa-plus'"></i>
-              {{ showAddBookForm ? '閉じる' : '新しい本を追加' }}
-            </button>
-          </div>
-
-          <div v-if="showAddBookForm" class="bg-gradient-to-r from-amber-50/70 to-emerald-50/70 p-4 rounded-2xl border border-amber-100/80 space-y-3">
-            <div class="font-bold text-xs text-slate-700 flex items-center gap-1">
-              <span>📖</span> 本の登録・自動検索
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-12 gap-2">
-              <div class="sm:col-span-7">
-                <label class="block text-[10px] font-bold text-slate-400 mb-1">本のタイトル</label>
-                <div class="flex gap-1.5">
-                  <input type="text" v-model="newBook.title" placeholder="例: 成瀬は天下を取りに行く" class="w-full border border-slate-200 rounded-xl p-2 text-xs bg-white">
-                  <button type="button" @click="searchCover" :disabled="searchingCover"
-                          class="shrink-0 text-[11px] bg-orange-500 hover:bg-orange-600 text-white font-bold px-3 rounded-xl border border-orange-600 transition shadow-xs">
-                    <span>🔍 表紙取得</span>
-                  </button>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="label">日付</label>
+                  <input type="date" class="field" v-model="form.date" required>
+                </div>
+                <div>
+                  <label class="label">金額（円）</label>
+                  <input type="number" class="field" v-model.number="form.amount"
+                    min="1" required>
                 </div>
               </div>
 
-              <div class="sm:col-span-5">
-                <label class="block text-[10px] font-bold text-slate-400 mb-1">著者名</label>
-                <input type="text" v-model="newBook.author" placeholder="著者名" class="w-full border border-slate-200 rounded-xl p-2 text-xs bg-white">
-              </div>
-
-              <div class="sm:col-span-4">
-                <label class="block text-[10px] font-bold text-slate-400 mb-1">状態</label>
-                <select v-model="newBook.status" class="w-full border border-slate-200 rounded-xl p-2 text-xs bg-white font-bold">
-                  <option value="want">📖 読みたい本</option>
-                  <option value="tsundoku">📚 積ん読</option>
-                  <option value="read">🎉 読了</option>
+              <div>
+                <label class="label">カテゴリ</label>
+                <select class="field" v-model="form.category" required>
+                  <option v-for="cat in currentCategories" :key="cat"
+                    :value="cat">{{ getCategoryIcon(cat) }} {{ cat }}</option>
                 </select>
               </div>
 
-              <div class="sm:col-span-4">
-                <label class="block text-[10px] font-bold text-slate-400 mb-1">金額 (円)</label>
-                <input type="number" v-model.number="newBook.price" placeholder="1800" class="w-full border border-slate-200 rounded-xl p-2 text-xs bg-white">
+              <div>
+                <label class="label">メモ</label>
+                <input class="field" v-model="form.memo"
+                  placeholder="例：カフェ、書店、アルバイト代">
               </div>
 
-              <div class="sm:col-span-4">
-                <label class="block text-[10px] font-bold text-slate-400 mb-1">画像URL</label>
-                <input type="text" v-model="newBook.coverUrl" placeholder="https://..." class="w-full border border-slate-200 rounded-xl p-2 text-xs bg-white">
-              </div>
+              <button class="btn w-full" type="submit" :disabled="loading">
+                {{ loading?'保存中...':isEditing?'変更を保存':'記録を追加' }}
+              </button>
 
-              <div class="sm:col-span-12 flex justify-end pt-1">
-                <button @click="addBook" class="px-5 py-2 bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs rounded-xl transition shadow-sm border border-orange-600 flex items-center gap-1.5">
-                  登録する
-                </button>
-              </div>
-            </div>
+              <button v-if="isEditing" type="button"
+                @click="resetForm()" class="subbtn w-full">
+                編集をキャンセル
+              </button>
+            </form>
           </div>
         </div>
 
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5">
-          <div v-for="book in filteredBooks" :key="book.id"
-               class="rounded-2xl border-2 shadow-md transition overflow-hidden flex flex-col justify-between relative group"
-               :class="getCardStyleClass(book.status)">
-            
-            <div class="text-[10px] font-black px-2 py-1 text-white flex justify-between items-center shadow-2xs"
-                 :class="getHeaderBandStyleClass(book.status)">
-              <span class="truncate tracking-wider">{{ getStatusLabelShort(book.status) }}</span>
-              <button @click="deleteBook(book.id)" class="text-white/80 hover:text-white text-[10px]">✕</button>
-            </div>
+        <!-- 履歴 -->
+        <div class="panel">
+          <h2 class="font-bold mb-3">
+            🧾 {{ selectedDateFilter || currentYearMonthLabel }} の履歴
+          </h2>
 
-            <div class="p-2 space-y-1.5">
-              <div class="w-full aspect-[3/4] rounded-xl overflow-hidden bg-slate-200/80 border border-slate-300 shadow-xs flex items-center justify-center relative">
-                <img v-if="book.coverUrl && !book.imageError" :src="book.coverUrl" referrerpolicy="no-referrer" @error="book.imageError = true" class="w-full h-full object-cover">
-                <div v-else class="w-full h-full bg-gradient-to-br from-amber-200 via-orange-100 to-amber-50 p-2 flex flex-col justify-between items-center text-center">
-                  <span class="text-2xl mt-1">📖</span>
-                  <div class="font-black text-[10px] text-slate-800 line-clamp-3 leading-tight">{{ book.title }}</div>
-                  <span class="text-[8px] text-slate-500 font-bold truncate max-w-full">{{ book.author || 'YUI Library' }}</span>
+          <p class="text-xs text-slate-400 mb-3">
+            全{{ filteredTransactions.length }}件・
+            転記済{{ filteredTransactions.filter(t=>t.copied).length }}件
+          </p>
+
+          <p v-if="fetching" class="text-center py-8">
+            読み込み中...
+          </p>
+          <p v-else-if="!filteredTransactions.length"
+            class="text-center text-sm text-slate-400 py-8">
+            まだ記録がありません
+          </p>
+
+          <div v-for="item in filteredTransactions" :key="item.id"
+            class="border-b border-emerald-50 py-3">
+
+            <div class="flex justify-between gap-2">
+              <div class="min-w-0">
+                <div class="font-bold text-sm break-words">
+                  {{ getCategoryIcon(item.category) }}
+                  {{ item.memo || item.category }}
                 </div>
+                <p class="text-xs text-slate-400">
+                  {{ item.date }}・{{ item.category }}
+                </p>
+                <label class="text-xs text-emerald-700">
+                  <input type="checkbox" :checked="item.copied"
+                    @change="toggleCopied(item)">
+                  {{ item.copied?'転記済':'未転記' }}
+                </label>
               </div>
 
-              <div class="pt-0.5 space-y-0.5">
-                <h3 class="font-extrabold text-xs text-slate-900 leading-snug line-clamp-2 h-8">{{ book.title }}</h3>
-                <p class="text-[10px] text-slate-500 font-bold truncate">{{ book.author || '著者未設定' }}</p>
+              <div class="text-right shrink-0">
+                <div class="font-bold"
+                  :class="item.type==='income'?'text-emerald-600':'text-rose-500'">
+                  {{ item.type==='income'?'+':'-' }}¥{{ yen(item.amount) }}
+                </div>
+                <button @click="editTransaction(item)"
+                  class="text-xs text-amber-700 mr-3">編集</button>
+                <button @click="deleteTransaction(item.id)"
+                  class="text-xs text-rose-500">削除</button>
               </div>
             </div>
           </div>
         </div>
-      </section>
+      </div>
+    </section>
 
-    </main>
+    <!-- ========== 振り返り・診断 ========== -->
+    <section v-if="currentTab==='report'" class="space-y-5">
 
-    <!-- 下部ナビバー (スマホ用) -->
-    <nav class="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-emerald-100 flex justify-around p-2 z-20 shadow-lg md:hidden">
-      <button @click="switchTab('calendar')" class="flex-1 flex flex-col items-center py-1 text-xs font-bold"
-              :class="currentTab === 'calendar' ? 'text-emerald-600' : 'text-slate-400'">
-        <i class="fa-solid fa-receipt text-base mb-1" :class="currentTab === 'calendar' ? 'text-amber-400' : ''"></i>
-        家計簿
-      </button>
-      <button @click="switchTab('report')" class="flex-1 flex flex-col items-center py-1 text-xs font-bold"
-              :class="currentTab === 'report' ? 'text-emerald-600' : 'text-slate-400'">
-        <i class="fa-solid fa-chart-pie text-base mb-1" :class="currentTab === 'report' ? 'text-amber-400' : ''"></i>
-        振り返り
-      </button>
-      <button @click="switchTab('plan')" class="flex-1 flex flex-col items-center py-1 text-xs font-bold"
-              :class="currentTab === 'plan' ? 'text-emerald-600' : 'text-slate-400'">
-        <i class="fa-solid fa-sliders text-base mb-1" :class="currentTab === 'plan' ? 'text-amber-400' : ''"></i>
-        計画
-      </button>
-      <button @click="switchTab('savings')" class="flex-1 flex flex-col items-center py-1 text-xs font-bold"
-              :class="currentTab === 'savings' ? 'text-emerald-600' : 'text-slate-400'">
-        <i class="fa-solid fa-piggy-bank text-base mb-1" :class="currentTab === 'savings' ? 'text-amber-400' : ''"></i>
-        貯金
-      </button>
-      <button @click="switchTab('books')" class="flex-1 flex flex-col items-center py-1 text-xs font-bold"
-              :class="currentTab === 'books' ? 'text-emerald-600' : 'text-slate-400'">
-        <i class="fa-solid fa-book-bookmark text-base mb-1" :class="currentTab === 'books' ? 'text-amber-400' : ''"></i>
-        読書
-      </button>
-    </nav>
+      <!-- お金の使い方診断 -->
+      <div class="panel text-center space-y-4">
+        <h2 class="font-bold text-lg">✨ 今月のお金の使い方診断</h2>
 
-  </div>
+        <div class="bg-gradient-to-br from-amber-50 to-emerald-50 rounded-2xl p-6">
+          <div class="text-6xl mb-3">{{ moneyDiagnosis.emoji }}</div>
+          <h3 class="text-xl font-extrabold text-emerald-700">
+            {{ moneyDiagnosis.name }}
+          </h3>
+          <p class="text-sm mt-2">{{ moneyDiagnosis.description }}</p>
+          <p class="text-xs text-slate-500 mt-2">{{ moneyDiagnosis.reason }}</p>
+        </div>
 
-  <script>
-    const GAS_URL = 'https://script.google.com/macros/s/AKfycbxu0IZnDw3Y3E5FXRn02b2xFFa7x9BTRCij1_JpsCAbRYBivhk5pV7wIqRxJKCqQxw9/exec';
+        <div class="bg-amber-50 rounded-xl p-4 text-left">
+          <h4 class="font-bold text-amber-800 text-sm mb-2">
+            💌 YUIからのアドバイス
+          </h4>
+          <p class="text-sm">{{ moneyDiagnosis.advice }}</p>
+        </div>
 
-    let categoryChartInstance = null;
-    let dailyChartInstance = null;
+        <p class="text-xs text-slate-400">
+          ※ 家計簿の支出カテゴリと収支差額を使った簡易診断です。
+        </p>
+      </div>
 
-    window.addEventListener('DOMContentLoaded', () => {
-      Vue.createApp({
-        data() {
-          const today = new Date();
-          const yyyy = today.getFullYear();
-          const mm = String(today.getMonth() + 1).padStart(2, '0');
-          const dd = String(today.getDate()).padStart(2, '0');
+      <!-- 集計 -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div class="panel !p-3">
+          <p class="label">今月の支出</p>
+          <p class="font-bold text-rose-500">¥{{ yen(monthlyExpense) }}</p>
+        </div>
+        <div class="panel !p-3">
+          <p class="label">今月の収入</p>
+          <p class="font-bold text-emerald-600">¥{{ yen(monthlyIncome) }}</p>
+        </div>
+        <div class="panel !p-3">
+          <p class="label">収支差額</p>
+          <p class="font-bold">¥{{ yen(monthlyBalance) }}</p>
+        </div>
+        <div class="panel !p-3">
+          <p class="label">1日平均支出</p>
+          <p class="font-bold">¥{{ yen(dailyAverageExpense) }}</p>
+        </div>
+      </div>
 
-          return {
-            currentTab: 'calendar',
-            transactions: [],
-            budgetPlans: [],
-            savingsGoals: [],
-            books: [],
+      <div class="grid md:grid-cols-2 gap-5">
+        <div class="panel">
+          <h2 class="font-bold mb-3">🍀 カテゴリ別支出</h2>
+          <p v-if="!categoryBreakdown.length" class="text-sm text-slate-400">
+            支出データがありません
+          </p>
+          <div v-else>
+            <div class="max-w-xs mx-auto">
+              <canvas id="categoryChart"></canvas>
+            </div>
+            <div v-for="c in categoryBreakdown" :key="c.category"
+              class="flex justify-between text-xs border-b py-2">
+              <span>{{ getCategoryIcon(c.category) }} {{ c.category }}</span>
+              <span>¥{{ yen(c.amount) }}（{{ c.ratio }}%）</span>
+            </div>
+          </div>
+        </div>
 
-            loading: false,
-            fetching: false,
-            selectedYearMonth: `${yyyy}-${mm}`,
-            selectedDateFilter: null,
-            isEditing: false,
-            editingId: null,
-            
-            incomeCategories: ['給料', '臨時収入', 'おこづかい', 'その他'],
-            showAddCategoryForm: false,
-            editingCategoryIndex: null,
-            editingCategoryName: '',
-            newCat: { name: '', target: 10000 },
-            
-            showAddSavingsForm: false,
-            editingSavingsIndex: null,
-            editingSavingsTitle: '',
-            newGoal: { title: '', current: 0, target: 100000 },
+        <div class="panel">
+          <h2 class="font-bold mb-3">📊 日別支出の推移</h2>
+          <div class="h-72"><canvas id="dailyChart"></canvas></div>
+        </div>
+      </div>
+    </section>
 
-            showAddBookForm: false,
-            searchingCover: false,
-            bookFilter: 'all',
-            newBook: { title: '', author: '', price: '', status: 'want', coverUrl: '', rating: 5, review: '' },
+    <!-- ========== 使用計画 ========== -->
+    <section v-if="currentTab==='plan'" class="space-y-5">
 
-            form: {
-              date: `${yyyy}-${mm}-${dd}`,
-              type: 'expense',
-              amount: '',
-              category: '食費',
-              memo: ''
-            }
-          }
-        },
-        computed: {
-          currentCategories() {
-            if (this.form.type === 'income') {
-              return this.incomeCategories.map(cat => ({ name: cat, label: `${this.getCategoryIcon(cat)} ${cat}` }));
-            }
-            return this.budgetPlans.map(plan => ({ name: plan.category, label: `${this.getCategoryIcon(plan.category)} ${plan.category}` }));
-          },
-          currentYearMonthLabel() {
-            const [y, m] = this.selectedYearMonth.split('-');
-            return `${y}年${Number(m)}月`;
-          },
-          monthlyTransactions() {
-            return this.transactions.filter(t => t.date && t.date.startsWith(this.selectedYearMonth));
-          },
-          filteredTransactions() {
-            let list = this.monthlyTransactions;
-            if (this.selectedDateFilter) list = list.filter(t => t.date === this.selectedDateFilter);
-            return list;
-          },
-          monthlyIncome() {
-            return this.monthlyTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + Number(t.amount), 0);
-          },
-          monthlyExpense() {
-            return this.monthlyTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + Number(t.amount), 0);
-          },
-          monthlyBalance() {
-            return this.monthlyIncome - this.monthlyExpense;
-          },
-          dailyAverageExpense() {
-            if (!this.selectedYearMonth) return 0;
-            const [year, month] = this.selectedYearMonth.split('-').map(Number);
-            const daysInMonth = new Date(year, month, 0).getDate();
-            return Math.round(this.monthlyExpense / daysInMonth);
-          },
-          categoryBreakdown() {
-            const map = {};
-            this.monthlyTransactions.filter(t => t.type === 'expense').forEach(t => {
-              const cat = t.category || 'その他';
-              map[cat] = (map[cat] || 0) + Number(t.amount);
-            });
-            const total = this.monthlyExpense || 1;
-            return Object.keys(map).map(cat => ({
-              category: cat,
-              amount: map[cat],
-              ratio: Math.round((map[cat] / total) * 100)
-            })).sort((a, b) => b.amount - a.amount);
-          },
-          calendarDays() {
-            if (!this.selectedYearMonth) return [];
-            const [year, month] = this.selectedYearMonth.split('-').map(Number);
-            const firstDay = new Date(year, month - 1, 1);
-            const lastDay = new Date(year, month, 0);
-            const startDayOfWeek = firstDay.getDay();
-            const daysInMonth = lastDay.getDate();
+      <div class="panel">
+        <h2 class="font-bold mb-3">📝 使用計画・予算管理</h2>
+        <p class="text-xs text-slate-400 mb-3">
+          カテゴリごとに毎月の予算を設定できます。
+        </p>
 
-            const days = [];
-            for (let i = 0; i < startDayOfWeek; i++) {
-              days.push({ day: null, dateStr: null });
-            }
+        <div class="grid sm:grid-cols-3 gap-2">
+          <input class="field" v-model="newCat.name" placeholder="カテゴリ名">
+          <input class="field" type="number" v-model.number="newCat.target"
+            min="0" placeholder="予算">
+          <button class="btn" @click="addCategory">カテゴリを追加</button>
+        </div>
+      </div>
 
-            const todayObj = new Date();
-            const todayStr = `${todayObj.getFullYear()}-${String(todayObj.getMonth() + 1).padStart(2, '0')}-${String(todayObj.getDate()).padStart(2, '0')}`;
+      <div class="grid md:grid-cols-2 gap-4">
+        <div v-for="(p,i) in budgetPlans" :key="p.category" class="panel">
+          <div class="flex justify-between items-center mb-3">
+            <h3 class="font-bold">
+              {{ getCategoryIcon(p.category) }} {{ p.category }}
+            </h3>
+            <button @click="deleteCategory(i)"
+              class="text-rose-400 text-xs">削除</button>
+          </div>
 
-            for (let d = 1; d <= daysInMonth; d++) {
-              const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-              const dayList = this.transactions.filter(t => t.date === dateStr);
-              const expense = dayList.filter(t => t.type === 'expense').reduce((sum, t) => sum + Number(t.amount), 0);
-              const income = dayList.filter(t => t.type === 'income').reduce((sum, t) => sum + Number(t.amount), 0);
+          <div class="flex justify-between text-sm mb-2">
+            <span>使用額 ¥{{ yen(getCategorySpent(p.category)) }}</span>
+            <span v-if="p.target>0">
+              {{ Math.round(getCategorySpent(p.category)/p.target*100) }}%
+            </span>
+          </div>
 
-              days.push({ day: d, dateStr, expense, income, isToday: dateStr === todayStr });
-            }
-            return days;
-          },
-          filteredBooks() {
-            if (this.bookFilter === 'want') return this.books.filter(b => b.status === 'want');
-            if (this.bookFilter === 'tsundoku') return this.books.filter(b => b.status === 'tsundoku');
-            if (this.bookFilter === 'read') return this.books.filter(b => b.status === 'read');
-            return this.books;
-          }
-        },
-        mounted() {
-          this.fetchAllData();
-        },
-        methods: {
-          // カテゴリ名から適切な絵文字アイコンを判定して返す
-          getCategoryIcon(categoryName) {
-            if (!categoryName) return '✨';
-            const name = String(categoryName).trim();
-            if (name.includes('給料') || name.includes('給与')) return '💰';
-            if (name.includes('臨時')) return '🎁';
-            if (name.includes('こづかい') || name.includes('小遣い')) return '👛';
-            if (name.includes('食')) return '🍴';
-            if (name.includes('交通') || name.includes('電車') || name.includes('バス') || name.includes('車')) return '🚃';
-            if (name.includes('書') || name.includes('本')) return '📖';
-            if (name.includes('友') || name.includes('交際') || name.includes('人')) return '🩷';
-            if (name.includes('必要') || name.includes('住') || name.includes('家') || name.includes('光熱') || name.includes('固定')) return '🏠';
-            if (name.includes('趣味') || name.includes('遊') || name.includes('推し')) return '🎨';
-            if (name.includes('日用') || name.includes('雑貨') || name.includes('生活')) return '🧺';
-            if (name.includes('美容') || name.includes('服')) return '💄';
-            if (name.includes('医療') || name.includes('薬')) return '💊';
-            return '✨';
-          },
+          <div class="bg-slate-100 h-3 rounded-full overflow-hidden">
+            <div class="h-full rounded-full"
+              :class="getCategorySpent(p.category)>p.target&&p.target>0?'bg-rose-400':'bg-emerald-400'"
+              :style="{width:p.target>0?Math.min(100,getCategorySpent(p.category)/p.target*100)+'%':'0%'}">
+            </div>
+          </div>
 
-          // カテゴリ名から背景色クラスを判定して返す
-          getCategoryColorClass(categoryName, type) {
-            if (type === 'income') return 'bg-amber-100/90 border border-amber-200/80';
-            if (!categoryName) return 'bg-amber-100/90 border border-amber-200/80';
-            const name = String(categoryName).trim();
-            if (name.includes('食')) return 'bg-amber-100/90 border border-amber-200/80';
-            if (name.includes('交通')) return 'bg-sky-100/90 border border-sky-200/80';
-            if (name.includes('書')) return 'bg-purple-100/90 border border-purple-200/80';
-            if (name.includes('友')) return 'bg-pink-100/90 border border-pink-200/80';
-            if (name.includes('必要')) return 'bg-teal-100/90 border border-teal-200/80';
-            if (name.includes('趣味')) return 'bg-indigo-100/90 border border-indigo-200/80';
-            if (name.includes('日用')) return 'bg-emerald-100/90 border border-emerald-200/80';
-            return 'bg-amber-100/90 border border-amber-200/80';
-          },
+          <label class="label mt-3">毎月の予算（円）</label>
+          <input type="number" min="0" class="field"
+            v-model.number="p.target"
+            @change="syncBudgetPlansToGAS">
+        </div>
+      </div>
+    </section>
 
-          getCardStyleClass(status) {
-            if (status === 'want') return 'bg-gradient-to-b from-orange-200/90 via-orange-100/40 to-white border-orange-500 hover:border-orange-600 shadow-orange-200/60';
-            if (status === 'tsundoku') return 'bg-gradient-to-b from-blue-200/90 via-blue-100/40 to-white border-blue-500 hover:border-blue-600 shadow-blue-200/60';
-            if (status === 'read') return 'bg-gradient-to-b from-emerald-200/90 via-emerald-100/40 to-white border-emerald-600 hover:border-emerald-700 shadow-emerald-200/60';
-            return 'bg-white border-slate-200';
-          },
-          getHeaderBandStyleClass(status) {
-            if (status === 'want') return 'bg-orange-600';
-            if (status === 'tsundoku') return 'bg-blue-600';
-            if (status === 'read') return 'bg-emerald-700';
-            return 'bg-slate-500';
-          },
-          getStatusLabelShort(status) {
-            if (status === 'want') return '📖 読みたい';
-            if (status === 'tsundoku') return '📚 積ん読';
-            if (status === 'read') return '🎉 読了';
-            return '本';
-          },
+    <!-- ========== 貯金と未来予想 ========== -->
+    <section v-if="currentTab==='savings'" class="space-y-5">
 
-          async fetchAllData() {
-            this.fetching = true;
-            try {
-              const res = await fetch(GAS_URL);
-              const data = await res.json();
-              
-              if (Array.isArray(data.transactions)) {
-                this.transactions = data.transactions.map(item => ({ 
-                  ...item, 
-                  date: this.cleanDate(item.date),
-                  copied: Boolean(item.copied)
-                })).sort((a, b) => new Date(b.date) - new Date(a.date));
-              }
+      <div class="panel">
+        <h2 class="font-bold text-lg mb-2">🐷 貯金目標・未来予想</h2>
+        <p class="text-xs text-slate-500 mb-4">
+          目標金額と毎月の積立額から、達成予定月を予測します。
+        </p>
 
-              if (Array.isArray(data.budgetPlans) && data.budgetPlans.length > 0) {
-                this.budgetPlans = data.budgetPlans;
-              } else if (this.budgetPlans.length === 0) {
-                this.budgetPlans = [
-                  { category: '食費', target: 40000 },
-                  { category: '交通費', target: 15000 },
-                  { category: '書籍費', target: 5000 },
-                  { category: '日用品費', target: 10000 },
-                  { category: 'その他', target: 0 }
-                ];
-                this.syncBudgetPlansToGAS();
-              }
+        <div class="grid sm:grid-cols-2 gap-3">
+          <div>
+            <label class="label">目標名</label>
+            <input class="field" v-model="newGoal.title"
+              placeholder="例：旅行、パソコン">
+          </div>
+          <div>
+            <label class="label">現在の貯金額（円）</label>
+            <input class="field" type="number" min="0"
+              v-model.number="newGoal.current">
+          </div>
+          <div>
+            <label class="label">目標金額（円）</label>
+            <input class="field" type="number" min="1"
+              v-model.number="newGoal.target">
+          </div>
+          <div>
+            <label class="label">毎月の積立予定額（円）</label>
+            <input class="field" type="number" min="0"
+              v-model.number="newGoal.monthlySaving">
+          </div>
+        </div>
 
-              if (Array.isArray(data.savingsGoals) && data.savingsGoals.length > 0) {
-                this.savingsGoals = data.savingsGoals;
-              }
+        <button class="btn w-full mt-3" @click="addSavingsGoal">
+          ＋ 新しい貯金目標を追加
+        </button>
+      </div>
 
-              if (Array.isArray(data.books) && data.books.length > 0) {
-                this.books = data.books.map(b => ({ ...b, imageError: false }));
-              }
+      <div class="grid md:grid-cols-2 gap-5">
+        <div v-for="(goal,i) in savingsGoals" :key="i"
+          class="panel space-y-3">
 
-              if (this.currentTab === 'report') this.$nextTick(() => this.renderCharts());
-            } catch (e) { console.error(e); } finally { this.fetching = false; }
-          },
+          <div class="flex justify-between">
+            <h3 class="font-bold">🌱 {{ goal.title }}</h3>
+            <button class="text-xs text-rose-400"
+              @click="deleteSavingsGoal(i)">削除</button>
+          </div>
 
-          async syncBudgetPlansToGAS() {
-            if (!GAS_URL) return;
-            try {
-              await fetch(GAS_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain' },
-                body: JSON.stringify({ action: 'saveBudgetPlans', budgetPlans: this.budgetPlans })
-              });
-            } catch(e) { console.error(e); }
-          },
-          async syncSavingsGoalsToGAS() {
-            if (!GAS_URL) return;
-            try {
-              await fetch(GAS_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain' },
-                body: JSON.stringify({ action: 'saveSavingsGoals', savingsGoals: this.savingsGoals })
-              });
-            } catch(e) { console.error(e); }
-          },
-          async syncBooksToGAS() {
-            if (!GAS_URL) return;
-            try {
-              await fetch(GAS_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain' },
-                body: JSON.stringify({ action: 'saveBooks', books: this.books })
-              });
-            } catch(e) { console.error(e); }
-          },
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="label">現在の貯金</label>
+              <input class="field" type="number" min="0"
+                v-model.number="goal.current"
+                @change="syncSavingsGoalsToGAS">
+            </div>
+            <div>
+              <label class="label">目標金額</label>
+              <input class="field" type="number" min="1"
+                v-model.number="goal.target"
+                @change="syncSavingsGoalsToGAS">
+            </div>
+          </div>
 
-          async toggleCopied(item) {
-            item.copied = !item.copied;
-            try {
-              await fetch(GAS_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain' },
-                body: JSON.stringify({ action: 'toggleCopied', id: item.id, copied: item.copied })
-              });
-            } catch (e) { console.error(e); }
-          },
-          switchTab(tab) {
-            this.currentTab = tab;
-            if (tab === 'report') this.$nextTick(() => this.renderCharts());
-          },
-          renderCharts() {
-            if (typeof Chart === 'undefined') return;
+          <div>
+            <label class="label">毎月の積立予定額（円）</label>
+            <input class="field" type="number" min="0"
+              v-model.number="goal.monthlySaving"
+              @change="syncSavingsGoalsToGAS">
+          </div>
 
-            const categoryCanvas = document.getElementById('categoryDoughnutChart');
-            if (categoryCanvas) {
-              if (categoryChartInstance) categoryChartInstance.destroy();
-              const labels = this.categoryBreakdown.map(c => c.category);
-              const dataValues = this.categoryBreakdown.map(c => c.amount);
-              const colors = ['#f59e0b', '#10b981', '#3b82f6', '#ec4899', '#8b5cf6', '#06b6d4', '#84cc16'];
+          <div class="bg-slate-100 rounded-full h-4 overflow-hidden">
+            <div class="bg-gradient-to-r from-emerald-400 to-amber-300 h-full rounded-full transition-all"
+              :style="{width:getSavingsProgress(goal)+'%'}">
+            </div>
+          </div>
 
-              categoryChartInstance = new Chart(categoryCanvas, {
-                type: 'doughnut',
-                data: { labels, datasets: [{ data: dataValues, backgroundColor: colors.slice(0, labels.length) }] },
-                options: { responsive: true, plugins: { legend: { display: false } } }
-              });
-            }
+          <div class="flex justify-between text-xs">
+            <span>達成率 {{ getSavingsProgress(goal) }}%</span>
+            <span>残り ¥{{ yen(Math.max(0,goal.target-goal.current)) }}</span>
+          </div>
 
-            const dailyCanvas = document.getElementById('dailyBarChart');
-            if (dailyCanvas) {
-              if (dailyChartInstance) dailyChartInstance.destroy();
-              const [year, month] = this.selectedYearMonth.split('-').map(Number);
-              const daysInMonth = new Date(year, month, 0).getDate();
-              const dayLabels = [];
-              const dayValues = [];
+          <div class="bg-gradient-to-br from-emerald-50 to-amber-50 rounded-2xl p-5 text-center">
+            <div class="text-3xl mb-2">🔮</div>
+            <p class="text-xs text-slate-500 mb-2">貯金の未来予想</p>
+            <p class="text-lg font-bold text-emerald-700">
+              {{ getSavingsForecast(goal) }}
+            </p>
+          </div>
 
-              for (let d = 1; d <= daysInMonth; d++) {
-                dayLabels.push(`${d}日`);
-                const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-                const exp = this.transactions
-                  .filter(t => t.date === dateStr && t.type === 'expense')
-                  .reduce((sum, t) => sum + Number(t.amount), 0);
-                dayValues.push(exp);
-              }
+          <p class="text-xs text-slate-400">
+            ※ 毎月同じ金額を積み立てる想定です。利息や臨時出費は含みません。
+          </p>
+        </div>
+      </div>
+    </section>
 
-              dailyChartInstance = new Chart(dailyCanvas, {
-                type: 'bar',
-                data: { labels: dayLabels, datasets: [{ label: '支出', data: dayValues, backgroundColor: '#f87171' }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
-              });
-            }
-          },
+    <!-- ========== 読書ノート ========== -->
+    <section v-if="currentTab==='books'" class="space-y-5">
+      <div class="panel">
+        <h2 class="font-bold text-lg mb-3">📚 YUI 読書ノート</h2>
 
-          addCategory() {
-            if (!this.newCat.name.trim()) return alert('カテゴリ名を入力してください');
-            this.budgetPlans.push({ category: this.newCat.name.trim(), target: Number(this.newCat.target) || 0 });
-            this.syncBudgetPlansToGAS();
-            this.newCat.name = ''; this.showAddCategoryForm = false;
-          },
-          deleteCategory(index) {
-            if (confirm(`削除しますか？`)) {
-              this.budgetPlans.splice(index, 1);
-              this.syncBudgetPlansToGAS();
-            }
-          },
-          addSavingsGoal() {
-            if (!this.newGoal.title.trim()) return alert('目標名を入力してください');
-            this.savingsGoals.push({ title: this.newGoal.title.trim(), current: Number(this.newGoal.current) || 0, target: Number(this.newGoal.target) || 0 });
-            this.syncSavingsGoalsToGAS();
-            this.newGoal = { title: '', current: 0, target: 100000 }; this.showAddSavingsForm = false;
-          },
-          deleteSavingsGoal(index) {
-            if (confirm(`削除しますか？`)) {
-              this.savingsGoals.splice(index, 1);
-              this.syncSavingsGoalsToGAS();
-            }
-          },
-          async searchCover() {
-            if (!this.newBook.title.trim()) return alert('タイトルを入力してください');
-            this.searchingCover = true;
-            try {
-              const query = encodeURIComponent(this.newBook.title.trim());
-              const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${query}&maxResults=3`);
-              const data = await res.json();
-              if (data.items && data.items.length > 0) {
-                for (const item of data.items) {
-                  const info = item.volumeInfo;
-                  let imgUrl = '';
-                  if (info.imageLinks && (info.imageLinks.thumbnail || info.imageLinks.smallThumbnail)) {
-                    imgUrl = (info.imageLinks.thumbnail || info.imageLinks.smallThumbnail).replace(/^http:/, 'https:').replace('&edge=curl', '');
-                  }
-                  if (imgUrl) {
-                    this.newBook.coverUrl = imgUrl;
-                    if (!this.newBook.author && info.authors) this.newBook.author = info.authors.join(', ');
-                    break;
-                  }
-                }
-              }
-            } catch(e) { alert('検索エラー'); } finally { this.searchingCover = false; }
-          },
-          addBook() {
-            if (!this.newBook.title.trim()) return alert('タイトルを入力してください');
-            this.books.unshift({
-              id: String(Date.now()),
-              title: this.newBook.title.trim(),
-              author: this.newBook.author.trim(),
-              price: Number(this.newBook.price) || 0,
-              status: this.newBook.status,
-              coverUrl: this.newBook.coverUrl.trim(),
-              rating: Number(this.newBook.rating) || 5,
-              review: ''
-            });
-            this.syncBooksToGAS();
-            this.newBook = { title: '', author: '', price: '', status: 'want', coverUrl: '', rating: 5, review: '' };
-            this.showAddBookForm = false;
-          },
-          deleteBook(id) {
-            if (confirm('本をリストから削除しますか？')) {
-              this.books = this.books.filter(b => b.id !== id);
-              this.syncBooksToGAS();
-            }
-          },
+        <div class="grid sm:grid-cols-2 gap-3">
+          <div>
+            <label class="label">本のタイトル</label>
+            <div class="flex gap-2">
+              <input class="field min-w-0" v-model="newBook.title"
+                placeholder="タイトル">
+              <button class="subbtn shrink-0" @click="searchCover"
+                :disabled="searchingCover">
+                🔍 表紙検索
+              </button>
+            </div>
+          </div>
+          <div>
+            <label class="label">著者名</label>
+            <input class="field" v-model="newBook.author">
+          </div>
+          <div>
+            <label class="label">価格（円）</label>
+            <input class="field" type="number" min="0"
+              v-model.number="newBook.price">
+          </div>
+          <div>
+            <label class="label">読書状態</label>
+            <select class="field" v-model="newBook.status">
+              <option value="want">📖 読みたい</option>
+              <option value="tsundoku">📚 積ん読</option>
+              <option value="read">🎉 読了</option>
+            </select>
+          </div>
+          <div class="sm:col-span-2">
+            <label class="label">表紙画像URL</label>
+            <input class="field" v-model="newBook.coverUrl">
+          </div>
+          <div v-if="newBook.coverUrl">
+            <img :src="newBook.coverUrl" class="h-28 rounded-lg"
+              referrerpolicy="no-referrer" alt="取得した表紙">
+          </div>
+        </div>
 
-          cleanDate(rawDate) {
-            if (!rawDate) return '';
-            let str = String(rawDate).trim();
-            if (str.includes('T')) str = str.split('T')[0];
-            return str.replace(/\//g, '-');
-          },
-          async saveTransaction() {
-            this.loading = true;
-            try {
-              await fetch(GAS_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain' },
-                body: JSON.stringify({ action: this.isEditing ? 'update' : 'add', id: this.editingId, ...this.form, copied: false })
-              });
-              await this.fetchAllData();
-              this.resetForm();
-            } catch (e) { alert('保存に失敗しました'); } finally { this.loading = false; }
-          },
-          editTransaction(item) {
-            this.isEditing = true; this.editingId = item.id;
-            this.form = { date: item.date, type: item.type, amount: Number(item.amount), category: item.category, memo: item.memo || '' };
-          },
-          cancelEdit() { this.isEditing = false; this.editingId = null; this.resetForm(); },
-          async deleteTransaction(id) {
-            if (!confirm('削除しますか？')) return;
-            this.fetching = true;
-            try {
-              await fetch(GAS_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ action: 'delete', id }) });
-              await this.fetchAllData();
-            } catch (e) { alert('削除失敗'); } finally { this.fetching = false; }
-          },
-          resetForm() {
-            this.isEditing = false; this.editingId = null; this.form.amount = ''; this.form.memo = '';
-          },
-          changeMonth(offset) {
-            const [year, month] = this.selectedYearMonth.split('-').map(Number);
-            const d = new Date(year, month - 1 + offset, 1);
-            this.selectedYearMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-          },
-          selectDate(dateStr) {
-            this.selectedDateFilter = this.selectedDateFilter === dateStr ? null : dateStr;
-          },
-          getCategorySpent(category) {
-            return this.monthlyTransactions.filter(t => t.type === 'expense' && t.category === category).reduce((sum, t) => sum + Number(t.amount), 0);
-          },
-          formatDateShort(dateStr) {
-            if (!dateStr) return '';
-            const parts = dateStr.split('-');
-            return parts.length >= 3 ? `${Number(parts[1])}月${Number(parts[2])}日` : dateStr;
-          },
-          formatK(num) { return Number(num).toLocaleString(); }
+        <button class="btn w-full mt-3" @click="addBook">
+          ＋ 本を登録する
+        </button>
+      </div>
+
+      <div class="flex flex-wrap gap-2">
+        <button v-for="f in bookFilters" :key="f.id"
+          class="subbtn"
+          :class="bookFilter===f.id?'!bg-amber-200':''"
+          @click="bookFilter=f.id">
+          {{ f.label }}
+        </button>
+      </div>
+
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+        <div v-for="book in filteredBooks" :key="book.id"
+          class="panel !p-2 space-y-2">
+
+          <div class="aspect-[3/4] bg-amber-50 rounded-xl overflow-hidden flex justify-center items-center">
+            <img v-if="book.coverUrl&&!book.imageError"
+              :src="book.coverUrl" class="w-full h-full object-cover"
+              referrerpolicy="no-referrer"
+              @error="book.imageError=true">
+            <div v-else class="text-center p-3">
+              <p class="text-4xl">📖</p>
+              <p class="text-xs font-bold mt-2">{{ book.title }}</p>
+            </div>
+          </div>
+
+          <p class="font-bold text-xs">{{ book.title }}</p>
+          <p class="text-xs text-slate-400">{{ book.author }}</p>
+          <p class="text-xs">¥{{ yen(book.price) }}</p>
+
+          <select v-model="book.status"
+            @change="syncBooksToGAS" class="field !text-xs">
+            <option value="want">読みたい</option>
+            <option value="tsundoku">積ん読</option>
+            <option value="read">読了</option>
+          </select>
+
+          <label class="label">評価</label>
+          <select class="field !text-xs"
+            v-model.number="book.rating" @change="syncBooksToGAS">
+            <option :value="0">未評価</option>
+            <option v-for="n in 5" :key="n" :value="n">
+              {{ '★'.repeat(n) }}
+            </option>
+          </select>
+
+          <textarea class="field" rows="2"
+            v-model="book.review"
+            @change="syncBooksToGAS"
+            placeholder="読書メモ"></textarea>
+
+          <button class="text-xs text-rose-500"
+            @click="deleteBook(book.id)">削除</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- スマホ用ナビ -->
+  <nav class="fixed bottom-0 left-0 right-0 z-30 bg-white/95 border-t border-emerald-100 flex justify-around md:hidden p-2">
+    <button v-for="tab in tabs" :key="tab.id"
+      @click="switchTab(tab.id)"
+      class="flex-1 text-center text-[10px] p-1"
+      :class="currentTab===tab.id?'text-emerald-700 font-bold':'text-slate-400'">
+      <div class="text-xl">{{ tab.icon }}</div>
+      {{ tab.short }}
+    </button>
+  </nav>
+</div>
+
+<script>
+const GAS_URL =
+  'https://script.google.com/macros/s/AKfycbxu0IZnDw3Y3E5FXRn02b2xFFa7x9BTRCij1_JpsCAbRYBivhk5pV7wIqRxJKCqQxw9/exec';
+
+let categoryChart = null;
+let dailyChart = null;
+
+const { createApp } = Vue;
+
+createApp({
+  data() {
+    const now = new Date();
+    const today =
+      `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+
+    return {
+      tabs: [
+        {id:'calendar',name:'家計簿',short:'家計簿',icon:'💰'},
+        {id:'report',name:'振り返り',short:'分析',icon:'📊'},
+        {id:'plan',name:'使用計画',short:'計画',icon:'📝'},
+        {id:'savings',name:'貯金',short:'貯金',icon:'🐷'},
+        {id:'books',name:'読書ノート',short:'読書',icon:'📚'}
+      ],
+      weekdays:['日','月','火','水','木','金','土'],
+      bookFilters:[
+        {id:'all',label:'すべて'},
+        {id:'want',label:'読みたい'},
+        {id:'tsundoku',label:'積ん読'},
+        {id:'read',label:'読了'}
+      ],
+
+      currentTab:'calendar',
+      selectedYearMonth:today.slice(0,7),
+      selectedDateFilter:null,
+
+      transactions:[],
+      budgetPlans:[],
+      savingsGoals:[],
+      books:[],
+
+      fetching:false,
+      loading:false,
+      errorMessage:'',
+      isEditing:false,
+      editingId:null,
+
+      incomeCategories:['給料','臨時収入','おこづかい','その他'],
+      form:{
+        date:today,type:'expense',amount:'',
+        category:'食費',memo:''
+      },
+      newCat:{name:'',target:10000},
+      newGoal:{
+        title:'',current:0,target:100000,monthlySaving:5000
+      },
+      newBook:{
+        title:'',author:'',price:0,status:'want',
+        coverUrl:'',rating:0,review:''
+      },
+      bookFilter:'all',
+      searchingCover:false
+    };
+  },
+
+  computed:{
+    currentYearMonthLabel(){
+      const [y,m]=this.selectedYearMonth.split('-');
+      return `${y}年${Number(m)}月`;
+    },
+
+    currentCategories(){
+      if(this.form.type==='income')return this.incomeCategories;
+      return this.budgetPlans.map(p=>p.category);
+    },
+
+    monthlyTransactions(){
+      return this.transactions.filter(t=>
+        String(t.date).startsWith(this.selectedYearMonth));
+    },
+
+    filteredTransactions(){
+      let result=this.monthlyTransactions;
+      if(this.selectedDateFilter){
+        result=result.filter(t=>t.date===this.selectedDateFilter);
+      }
+      return [...result].sort((a,b)=>b.date.localeCompare(a.date));
+    },
+
+    monthlyIncome(){
+      return this.monthlyTransactions
+        .filter(t=>t.type==='income')
+        .reduce((s,t)=>s+Number(t.amount||0),0);
+    },
+
+    monthlyExpense(){
+      return this.monthlyTransactions
+        .filter(t=>t.type==='expense')
+        .reduce((s,t)=>s+Number(t.amount||0),0);
+    },
+
+    monthlyBalance(){
+      return this.monthlyIncome-this.monthlyExpense;
+    },
+
+    dailyAverageExpense(){
+      const [y,m]=this.selectedYearMonth.split('-').map(Number);
+      return Math.round(this.monthlyExpense/new Date(y,m,0).getDate());
+    },
+
+    categoryBreakdown(){
+      const amounts={};
+      this.monthlyTransactions
+        .filter(t=>t.type==='expense')
+        .forEach(t=>{
+          const name=t.category||'その他';
+          amounts[name]=(amounts[name]||0)+Number(t.amount||0);
+        });
+
+      return Object.entries(amounts).map(([category,amount])=>({
+        category,amount,
+        ratio:this.monthlyExpense>0?
+          Math.round(amount/this.monthlyExpense*100):0
+      })).sort((a,b)=>b.amount-a.amount);
+    },
+
+    calendarDays(){
+      const [y,m]=this.selectedYearMonth.split('-').map(Number);
+      const result=[];
+      const firstDay=new Date(y,m-1,1).getDay();
+      const count=new Date(y,m,0).getDate();
+
+      for(let i=0;i<firstDay;i++)result.push({day:null});
+
+      const now=new Date();
+      const today=
+        `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+
+      for(let day=1;day<=count;day++){
+        const dateStr=`${y}-${String(m).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+        const list=this.transactions.filter(t=>t.date===dateStr);
+
+        result.push({
+          day,dateStr,isToday:dateStr===today,
+          income:list.filter(t=>t.type==='income')
+            .reduce((s,t)=>s+Number(t.amount),0),
+          expense:list.filter(t=>t.type==='expense')
+            .reduce((s,t)=>s+Number(t.amount),0)
+        });
+      }
+      return result;
+    },
+
+    filteredBooks(){
+      return this.bookFilter==='all'?
+        this.books:
+        this.books.filter(b=>b.status===this.bookFilter);
+    },
+
+    // お金の使い方診断
+    moneyDiagnosis(){
+      const expenses=this.monthlyTransactions.filter(t=>
+        t.type==='expense' && Number(t.amount)>0);
+
+      const total=expenses.reduce((s,t)=>s+Number(t.amount),0);
+
+      if(total<=0){
+        return {
+          emoji:'📝',
+          name:'診断待ち',
+          description:'今月の支出を記録すると診断できます。',
+          reason:'まだ支出が記録されていません。',
+          advice:'まずは今日のお買い物から記録してみよう！'
+        };
+      }
+
+      const groups={hobby:0,outing:0,daily:0,other:0};
+
+      expenses.forEach(t=>{
+        const category=String(t.category||'');
+        const amount=Number(t.amount)||0;
+
+        if(/趣味|推し|書籍|本|ゲーム|娯楽/.test(category)){
+          groups.hobby+=amount;
+        }else if(/交通|旅行|交際|友|レジャー/.test(category)){
+          groups.outing+=amount;
+        }else if(/食|日用|生活|住|光熱|固定/.test(category)){
+          groups.daily+=amount;
+        }else{
+          groups.other+=amount;
         }
-      }).mount('#app');
-    });
-  </script>
+      });
+
+      const hobbyRatio=groups.hobby/total;
+      const outingRatio=groups.outing/total;
+      const balanceRatio=this.monthlyIncome>0?
+        (this.monthlyIncome-total)/this.monthlyIncome:null;
+
+      if(balanceRatio!==null && balanceRatio>=0.3){
+        return {
+          emoji:'🐿️',
+          name:'コツコツ貯金型',
+          description:'収入に対して支出を抑えられている月です。',
+          reason:`収支差額は収入の${Math.round(balanceRatio*100)}%です。`,
+          advice:'余裕がある分を貯金目標に振り分けてみよう！'
+        };
+      }
+
+      if(hobbyRatio>=0.35){
+        return {
+          emoji:'🎨',
+          name:'趣味充実型',
+          description:'好きなことを楽しむための支出が多い月です。',
+          reason:`趣味・書籍関連の支出は全体の${Math.round(hobbyRatio*100)}%です。`,
+          advice:'趣味の予算を決めれば、安心して好きなことを楽しめそう！'
+        };
+      }
+
+      if(outingRatio>=0.35){
+        return {
+          emoji:'🧳',
+          name:'お出かけ満喫型',
+          description:'外出や人との時間を楽しんでいる月です。',
+          reason:`交通・旅行・交際関連は支出の${Math.round(outingRatio*100)}%です。`,
+          advice:'お出かけ用の積立を作るのもおすすめ！'
+        };
+      }
+
+      return {
+        emoji:'🌿',
+        name:'バランス型',
+        description:'趣味やお出かけへの支出に大きく偏っていない月です。',
+        reason:`趣味${Math.round(hobbyRatio*100)}%、お出かけ${Math.round(outingRatio*100)}%です。`,
+        advice:'カテゴリごとの予算と実際の支出も比較してみよう！'
+      };
+    }
+  },
+
+  mounted(){
+    this.fetchAllData();
+  },
+
+  methods:{
+    yen(value){
+      return (Number(value)||0).toLocaleString('ja-JP');
+    },
+
+    getCategoryIcon(name){
+      name=String(name||'');
+      if(/給料|給与/.test(name))return '💰';
+      if(/臨時/.test(name))return '🎁';
+      if(/食/.test(name))return '🍴';
+      if(/交通|電車|バス/.test(name))return '🚃';
+      if(/書籍|本|読書/.test(name))return '📚';
+      if(/趣味|推し|ゲーム/.test(name))return '🎨';
+      if(/友|交際/.test(name))return '💗';
+      if(/美容|服/.test(name))return '💄';
+      if(/日用|雑貨/.test(name))return '🧺';
+      if(/旅行/.test(name))return '🧳';
+      if(/住|光熱|固定/.test(name))return '🏠';
+      return '✨';
+    },
+
+    async apiPost(data){
+      const response=await fetch(GAS_URL,{
+        method:'POST',
+        headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body:JSON.stringify(data)
+      });
+
+      if(!response.ok)throw new Error('通信エラー');
+
+      const result=await response.json();
+
+      if(result.status!=='success'){
+        throw new Error(result.message||'保存に失敗しました');
+      }
+      return result;
+    },
+
+    async fetchAllData(){
+      this.fetching=true;
+      this.errorMessage='';
+
+      try{
+        const response=await fetch(GAS_URL);
+        if(!response.ok)throw new Error('読み込みに失敗しました');
+
+        const data=await response.json();
+
+        if(Array.isArray(data.transactions)){
+          this.transactions=data.transactions.map(t=>({
+            ...t,
+            date:String(t.date||'').slice(0,10),
+            copied:t.copied===true||String(t.copied).toUpperCase()==='TRUE'
+          }));
+        }
+
+        if(Array.isArray(data.budgetPlans)){
+          this.budgetPlans=data.budgetPlans;
+        }
+
+        if(Array.isArray(data.savingsGoals)){
+          this.savingsGoals=data.savingsGoals.map(g=>({
+            ...g,monthlySaving:Number(g.monthlySaving)||0
+          }));
+        }
+
+        if(Array.isArray(data.books)){
+          this.books=data.books.map(b=>({...b,imageError:false}));
+        }
+
+        // 初回のみカテゴリを用意する
+        if(!this.budgetPlans.length){
+          this.budgetPlans=[
+            {category:'食費',target:40000},
+            {category:'交通費',target:15000},
+            {category:'書籍費',target:5000},
+            {category:'日用品費',target:10000},
+            {category:'その他',target:0}
+          ];
+          await this.syncBudgetPlansToGAS();
+        }
+
+        this.ensureFormCategory();
+
+        if(this.currentTab==='report'){
+          this.$nextTick(()=>this.renderCharts());
+        }
+      }catch(e){
+        this.errorMessage='データ取得エラー：'+e.message;
+      }finally{
+        this.fetching=false;
+      }
+    },
+
+    ensureFormCategory(){
+      if(!this.currentCategories.includes(this.form.category)){
+        this.form.category=this.currentCategories[0]||'その他';
+      }
+    },
+
+    switchTab(tab){
+      this.currentTab=tab;
+      if(tab==='report'){
+        this.$nextTick(()=>this.renderCharts());
+      }
+    },
+
+    changeMonth(offset){
+      const [y,m]=this.selectedYearMonth.split('-').map(Number);
+      const date=new Date(y,m-1+offset,1);
+      this.selectedYearMonth=
+        `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}`;
+      this.selectedDateFilter=null;
+
+      if(this.currentTab==='report'){
+        this.$nextTick(()=>this.renderCharts());
+      }
+    },
+
+    selectDate(date){
+      this.selectedDateFilter=
+        this.selectedDateFilter===date?null:date;
+    },
+
+    async saveTransaction(){
+      if(!this.form.amount||this.form.amount<=0){
+        alert('正しい金額を入力してください');
+        return;
+      }
+
+      this.loading=true;
+      try{
+        await this.apiPost({
+          action:this.isEditing?'update':'add',
+          id:this.isEditing?this.editingId:String(Date.now()),
+          ...this.form,
+          copied:this.isEditing?
+            Boolean(this.transactions.find(t=>t.id===this.editingId)?.copied):
+            false
+        });
+
+        this.resetForm();
+        await this.fetchAllData();
+      }catch(e){
+        alert('保存できませんでした：'+e.message);
+      }finally{
+        this.loading=false;
+      }
+    },
+
+    editTransaction(item){
+      this.isEditing=true;
+      this.editingId=item.id;
+      this.form={
+        date:item.date,
+        type:item.type,
+        amount:Number(item.amount),
+        category:item.category,
+        memo:item.memo||''
+      };
+      this.$nextTick(()=>{
+        document.getElementById('transaction-form')?.scrollIntoView({
+          behavior:'smooth'
+        });
+      });
+    },
+
+    resetForm(){
+      this.isEditing=false;
+      this.editingId=null;
+      this.form.amount='';
+      this.form.memo='';
+    },
+
+    async deleteTransaction(id){
+      if(!confirm('この記録を削除しますか？'))return;
+      try{
+        await this.apiPost({action:'delete',id});
+        await this.fetchAllData();
+      }catch(e){
+        alert(e.message);
+      }
+    },
+
+    async toggleCopied(item){
+      const old=item.copied;
+      item.copied=!old;
+      try{
+        await this.apiPost({
+          action:'toggleCopied',id:item.id,copied:item.copied
+        });
+      }catch(e){
+        item.copied=old;
+        alert(e.message);
+      }
+    },
+
+    getCategorySpent(category){
+      return this.monthlyTransactions
+        .filter(t=>t.type==='expense'&&t.category===category)
+        .reduce((s,t)=>s+Number(t.amount||0),0);
+    },
+
+    async syncBudgetPlansToGAS(){
+      try{
+        await this.apiPost({
+          action:'saveBudgetPlans',
+          budgetPlans:this.budgetPlans
+        });
+      }catch(e){
+        alert('予算の保存に失敗しました：'+e.message);
+      }
+    },
+
+    async addCategory(){
+      const name=this.newCat.name.trim();
+      if(!name)return alert('カテゴリ名を入力してください');
+      if(this.budgetPlans.some(p=>p.category===name)){
+        return alert('同じカテゴリがあります');
+      }
+
+      this.budgetPlans.push({
+        category:name,
+        target:Math.max(0,Number(this.newCat.target)||0)
+      });
+
+      await this.syncBudgetPlansToGAS();
+      this.newCat={name:'',target:10000};
+    },
+
+    async deleteCategory(i){
+      if(!confirm('このカテゴリを削除しますか？'))return;
+      this.budgetPlans.splice(i,1);
+      await this.syncBudgetPlansToGAS();
+      this.ensureFormCategory();
+    },
+
+    getSavingsProgress(goal){
+      const target=Number(goal.target);
+      if(target<=0)return 0;
+      return Math.round(Math.max(0,
+        Math.min(100,Number(goal.current)/target*100)));
+    },
+
+    getSavingsForecast(goal){
+      const target=Number(goal.target);
+      const current=Number(goal.current);
+      const monthly=Number(goal.monthlySaving);
+
+      if(target<=0)return '目標金額を設定してください';
+      if(current>=target)return '🎉 目標達成！';
+      if(monthly<=0)return '積立予定額を入力してね';
+
+      const months=Math.ceil((target-current)/monthly);
+      const today=new Date();
+      const date=new Date(
+        today.getFullYear(),today.getMonth()+months,1
+      );
+
+      return `あと${months}か月！ ${date.getFullYear()}年${date.getMonth()+1}月ごろ達成予定`;
+    },
+
+    async syncSavingsGoalsToGAS(){
+      try{
+        await this.apiPost({
+          action:'saveSavingsGoals',
+          savingsGoals:this.savingsGoals
+        });
+      }catch(e){
+        alert('貯金データの保存に失敗しました：'+e.message);
+      }
+    },
+
+    async addSavingsGoal(){
+      if(!this.newGoal.title.trim()){
+        return alert('目標名を入力してください');
+      }
+      if(Number(this.newGoal.target)<=0){
+        return alert('目標金額を入力してください');
+      }
+
+      this.savingsGoals.push({
+        title:this.newGoal.title.trim(),
+        current:Math.max(0,Number(this.newGoal.current)||0),
+        target:Number(this.newGoal.target),
+        monthlySaving:Math.max(0,Number(this.newGoal.monthlySaving)||0)
+      });
+
+      await this.syncSavingsGoalsToGAS();
+      this.newGoal={
+        title:'',current:0,target:100000,monthlySaving:5000
+      };
+    },
+
+    async deleteSavingsGoal(i){
+      if(!confirm('貯金目標を削除しますか？'))return;
+      this.savingsGoals.splice(i,1);
+      await this.syncSavingsGoalsToGAS();
+    },
+
+    async searchCover(){
+      if(!this.newBook.title.trim()){
+        return alert('本のタイトルを入力してください');
+      }
+      this.searchingCover=true;
+
+      try{
+        const query=encodeURIComponent(this.newBook.title);
+        const response=await fetch(
+          `https://www.googleapis.com/books/v1/volumes?q=${query}&maxResults=5`
+        );
+        const data=await response.json();
+
+        const item=(data.items||[]).find(x=>
+          x.volumeInfo?.imageLinks?.thumbnail
+        );
+
+        if(!item){
+          alert('表紙が見つかりませんでした');
+          return;
+        }
+
+        const info=item.volumeInfo;
+        this.newBook.coverUrl=info.imageLinks.thumbnail
+          .replace(/^http:/,'https:');
+
+        if(!this.newBook.author&&info.authors){
+          this.newBook.author=info.authors.join('、');
+        }
+      }catch(e){
+        alert('本の検索に失敗しました');
+      }finally{
+        this.searchingCover=false;
+      }
+    },
+
+    async syncBooksToGAS(){
+      try{
+        await this.apiPost({
+          action:'saveBooks',
+          books:this.books
+        });
+      }catch(e){
+        alert('読書ノートの保存に失敗しました：'+e.message);
+      }
+    },
+
+    async addBook(){
+      if(!this.newBook.title.trim()){
+        return alert('タイトルを入力してください');
+      }
+
+      this.books.unshift({
+        ...this.newBook,
+        id:String(Date.now()),
+        title:this.newBook.title.trim(),
+        author:this.newBook.author.trim(),
+        price:Number(this.newBook.price)||0,
+        rating:Number(this.newBook.rating)||0,
+        imageError:false
+      });
+
+      await this.syncBooksToGAS();
+
+      this.newBook={
+        title:'',author:'',price:0,status:'want',
+        coverUrl:'',rating:0,review:''
+      };
+    },
+
+    async deleteBook(id){
+      if(!confirm('本を削除しますか？'))return;
+      this.books=this.books.filter(b=>b.id!==id);
+      await this.syncBooksToGAS();
+    },
+
+    renderCharts(){
+      if(typeof Chart==='undefined')return;
+
+      if(categoryChart)categoryChart.destroy();
+      if(dailyChart)dailyChart.destroy();
+
+      const catCanvas=document.getElementById('categoryChart');
+      const dayCanvas=document.getElementById('dailyChart');
+
+      if(catCanvas && this.categoryBreakdown.length){
+        categoryChart=new Chart(catCanvas,{
+          type:'doughnut',
+          data:{
+            labels:this.categoryBreakdown.map(x=>x.category),
+            datasets:[{
+              data:this.categoryBreakdown.map(x=>x.amount),
+              backgroundColor:[
+                '#fbbf24','#34d399','#f9a8d4',
+                '#93c5fd','#c4b5fd','#fdba74','#5eead4'
+              ]
+            }]
+          },
+          options:{
+            responsive:true,
+            plugins:{legend:{position:'bottom'}}
+          }
+        });
+      }
+
+      if(dayCanvas){
+        const days=this.calendarDays.filter(d=>d.day);
+
+        dailyChart=new Chart(dayCanvas,{
+          type:'bar',
+          data:{
+            labels:days.map(d=>d.day+'日'),
+            datasets:[{
+              label:'支出',
+              data:days.map(d=>d.expense),
+              backgroundColor:'#fda4af'
+            }]
+          },
+          options:{
+            responsive:true,
+            maintainAspectRatio:false,
+            plugins:{legend:{display:false}}
+          }
+        });
+      }
+    }
+  }
+}).mount('#app');
+</script>
 </body>
 </html>
